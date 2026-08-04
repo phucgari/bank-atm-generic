@@ -60,8 +60,9 @@ public class FileCardRepository implements CardRepository {
         return Optional.ofNullable(cards.get(cardId));
     }
 
-    @Override public void update(ATMCard card) {
+    @Override public ATMCard update(ATMCard card) {
         cards.put(card.getCardId(), card);
         saveAll();
+        return card;
     }
 }

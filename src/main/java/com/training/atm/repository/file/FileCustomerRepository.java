@@ -44,7 +44,7 @@ public class FileCustomerRepository implements CustomerRepository {
         return Optional.ofNullable(byAccountNumber.get(accountNumber));
     }
 
-    @Override public Collection<BankCustomer> findAll() {
-        return Collections.unmodifiableCollection(byCustomerId.values());
+    @Override public List<BankCustomer> findAll() {
+        return Collections.unmodifiableList(new ArrayList<>(byCustomerId.values()));
     }
 }

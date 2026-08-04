@@ -17,7 +17,7 @@ import com.training.atm.model.state.CardState;
  * <p>The {@link CardStatus} enum is retained for file serialisation only;
  * runtime behaviour is entirely determined by the state object.
  */
-public class ATMCard {
+public class ATMCard implements Identifiable<String> {
     private String    cardId;
     private String    pin;
     private String    accountNumber;
@@ -106,4 +106,10 @@ public class ATMCard {
         if (cardId == null || cardId.length() < 4) return cardId;
         return "****-****-****-" + cardId.substring(cardId.length() - 4);
     }
+
+    // -----------------------------------------------------------------------
+    // Identifiable<String> — card ID is the identity key
+    // -----------------------------------------------------------------------
+    @Override public String getId()            { return cardId; }
+    @Override public void   setId(String id)   { this.cardId = id; }
 }

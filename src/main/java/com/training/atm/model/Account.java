@@ -22,8 +22,8 @@ import com.training.atm.model.strategy.InterestStrategy;
  * path for subclass initialisation; direct field mutation from subclasses is
  * not possible.
  */
-public abstract class Account {
-    private final String          accountNumber;
+public abstract class Account implements Identifiable<String> {
+    private String                accountNumber;
     private       long            balance;
     private final AccountType     accountType;
     private       String          lastInterestYearMonth;  // "YYYY-MM" or ""
@@ -84,4 +84,10 @@ public abstract class Account {
     public void setLastInterestYearMonth(String yearMonth) {
         this.lastInterestYearMonth = (yearMonth != null) ? yearMonth : "";
     }
+
+    // -----------------------------------------------------------------------
+    // Identifiable<String> — account number is the identity key
+    // -----------------------------------------------------------------------
+    @Override public String getId()            { return accountNumber; }
+    @Override public void   setId(String id)   { this.accountNumber = id; }
 }

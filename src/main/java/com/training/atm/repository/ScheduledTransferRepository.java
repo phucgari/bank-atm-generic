@@ -7,8 +7,8 @@ import java.util.Optional;
 
 /** Repository abstraction for ScheduledTransfer persistence. */
 public interface ScheduledTransferRepository {
-    void save(ScheduledTransfer scheduledTransfer);
-    void update(ScheduledTransfer scheduledTransfer);
+    ScheduledTransfer save(ScheduledTransfer scheduledTransfer);
+    ScheduledTransfer update(ScheduledTransfer scheduledTransfer);
     Optional<ScheduledTransfer> findById(String id);
     List<ScheduledTransfer> findBySourceAccount(String accountNumber);
     List<ScheduledTransfer> findAllActive();

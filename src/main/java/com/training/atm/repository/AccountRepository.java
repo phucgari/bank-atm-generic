@@ -2,8 +2,9 @@ package com.training.atm.repository;
 
 import com.training.atm.model.Account;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
 
 /**
  * Repository abstraction for Account persistence.
@@ -13,7 +14,7 @@ import java.util.Optional;
  */
 public interface AccountRepository {
     Optional<Account> findByAccountNumber(String accountNumber);
-    Collection<Account> findAll();
-    void update(Account account);
+    List<Account> findAll();
+    Account update(Account account);
     void updateAll(Collection<Account> accounts);
 }

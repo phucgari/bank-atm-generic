@@ -36,7 +36,7 @@ public class FileTransactionRepository implements TransactionRepository {
     }
 
     @Override
-    public void save(Transaction t) {
+    public Transaction save(Transaction t) {
         transactions.add(t);
         try (PrintWriter pw = new PrintWriter(new FileWriter(FILE, true))) {
             pw.println(t.getTransactionId() + "|" + t.getAccountNumber() + "|" +
@@ -45,6 +45,7 @@ public class FileTransactionRepository implements TransactionRepository {
         } catch (IOException e) {
             System.err.println("Error saving transaction: " + e.getMessage());
         }
+        return t;
     }
 
     @Override

@@ -7,7 +7,7 @@ import java.util.List;
 
 /** Repository abstraction for Transaction persistence. */
 public interface TransactionRepository {
-    void save(Transaction transaction);
+    Transaction save(Transaction transaction);
     List<Transaction> findByAccountNumber(String accountNumber);
     long sumByAccountNumberTypeAndDate(String accountNumber, TransactionType type, String date);
 }

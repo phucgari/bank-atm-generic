@@ -62,8 +62,8 @@ public class FileScheduledTransferRepository implements ScheduledTransferReposit
         }
     }
 
-    @Override public void save(ScheduledTransfer st)   { update(st); }
-    @Override public void update(ScheduledTransfer st) { transfers.put(st.getId(), st); saveAll(); }
+    @Override public ScheduledTransfer save(ScheduledTransfer st)   { update(st); return st; }
+    @Override public ScheduledTransfer update(ScheduledTransfer st) { transfers.put(st.getId(), st); saveAll(); return st; }
 
     @Override public Optional<ScheduledTransfer> findById(String id) {
         return Optional.ofNullable(transfers.get(id));

@@ -1,6 +1,6 @@
 package com.training.atm.model;
 
-public class BankCustomer {
+public class BankCustomer implements Identifiable<String> {
     private String customerId;
     private String customerName;
     private String address;
@@ -24,4 +24,10 @@ public class BankCustomer {
     public String getEmail() { return email; }
     public String getCardId() { return cardId; }
     public String getAccountNumber() { return accountNumber; }
+
+    // -----------------------------------------------------------------------
+    // Identifiable<String> — customer ID is the identity key
+    // -----------------------------------------------------------------------
+    @Override public String getId()          { return customerId; }
+    @Override public void   setId(String id) { this.customerId = id; }
 }

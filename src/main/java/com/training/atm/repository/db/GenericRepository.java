@@ -11,8 +11,6 @@ public interface GenericRepository<T extends Identifiable<ID>, ID> {
 
     List<T> findAll();
 
-    List<T> findAll(Predicate<T> filter);
-
     T save(T entity);
 
     T update(T entity);
@@ -22,6 +20,4 @@ public interface GenericRepository<T extends Identifiable<ID>, ID> {
     long count();
 
     boolean existsById(ID id);
-
-    void delete(ID id);
 }

@@ -3,13 +3,15 @@ package com.training.atm.model;
 import com.training.atm.model.enums.TransactionType;
 
 /**
- * Immutable record of a single account transaction.
+ * Record of a single account transaction.
  *
- * Fix #5: all fields are {@code private final} — a DTO that can only be
- * created through its constructor has no mutable surface area.
+ * <p>Effectively immutable: all business fields are {@code private final} and
+ * can only be set through the constructor.  The transaction ID is mutable only
+ * through the {@link Identifiable} contract ({@link #setId(String)}), required
+ * so the entity can be handled uniformly by the generic repository layer.
  */
-public class Transaction {
-    private final String          transactionId;
+public class Transaction implements Identifiable<String> {
+    private String                transactionId;
     private final String          accountNumber;
     private final String          dateTime;      // "yyyy-MM-dd HH:mm:ss"
     private final TransactionType type;
@@ -35,4 +37,10 @@ public class Transaction {
     public long            getAmount()        { return amount; }
     public long            getBalanceAfter()  { return balanceAfter; }
     public String          getDescription()   { return description; }
+
+    // -----------------------------------------------------------------------
+    // Identifiable<String> — transaction ID is the identity key
+    // -----------------------------------------------------------------------
+    @Override public String getId()            { return transactionId; }
+    @Override public void   setId(String id)   { this.transactionId = id; }
 }

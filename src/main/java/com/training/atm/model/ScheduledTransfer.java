@@ -18,8 +18,8 @@ import com.training.atm.model.state.*;
  * previously appeared in {@link com.training.atm.session.CustomerSession} and
  * {@link com.training.atm.service.impl.TransferServiceImpl}.
  */
-public class ScheduledTransfer {
-    private final String                 id;
+public class ScheduledTransfer implements Identifiable<String> {
+    private String                     id;
     private final String                 sourceAccount;
     private final String                 destAccount;
     private final long                   amount;
@@ -110,4 +110,9 @@ public class ScheduledTransfer {
     public void setNextExecutionDate(String date)  { this.nextExecutionDate = date; }
     public void setRepeatCount(int count)           { this.repeatCount = count; }
     public void setEndDate(String date)             { this.endDate = (date != null) ? date : ""; }
+
+    // -----------------------------------------------------------------------
+    // Identifiable<String> — id is the identity key (getId() above)
+    // -----------------------------------------------------------------------
+    @Override public void setId(String id) { this.id = id; }
 }

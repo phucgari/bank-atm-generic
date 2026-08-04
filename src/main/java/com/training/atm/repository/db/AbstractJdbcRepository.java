@@ -137,8 +137,19 @@ public abstract class AbstractJdbcRepository<T extends Identifiable<ID>, ID>
         }
     }
 
+    /**
+     * Edits an existing entity by first checking if it exists,
+     * then delegating to the update workflow.
+     */
+    public T edit(T entity) {
+        if (entity.getId() == null || !existsById(entity.getId())) {
+            throw new IllegalArgumentException("Cannot edit entity because it does not exist with ID: " + entity.getId());
+        }
+        return update(entity);
+    }
+
     @Override
-    public void delete(ID id) {
+    public boolean deleteById(ID id) {
         String sql = "DELETE FROM " + getTableName() + " WHERE " + getIdColumnName() + " = ?";
 
         try (Connection conn = connectionManager.getConnection();
@@ -146,9 +157,44 @@ public abstract class AbstractJdbcRepository<T extends Identifiable<ID>, ID>
 
             ps.setObject(1, id);
             ps.executeUpdate();
-
+            return true;
         } catch (SQLException e) {
             throw new RuntimeException("Error deleting entity with ID: " + id, e);
         }
+    }
+
+    @Override
+    public boolean existsById(ID id) {
+        String sql = "SELECT 1 FROM " + getTableName() + " WHERE " + getIdColumnName() + " = ?";
+
+        try (Connection conn = connectionManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setObject(1, id);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error checking existence for entity with ID: " + id, e);
+        }
+    }
+
+    @Override
+    public long count() {
+        String sql = "SELECT COUNT(*) FROM " + getTableName();
+
+        try (Connection conn = connectionManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            if (rs.next()) {
+                return rs.getLong(1);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error counting entities in " + getTableName(), e);
+        }
+
+        return 0L;
     }
 }

@@ -81,13 +81,17 @@ public class FileAccountRepository implements AccountRepository {
         return Optional.ofNullable(accounts.get(accountNumber));
     }
 
-    @Override public Collection<Account> findAll() {
-        return Collections.unmodifiableCollection(accounts.values());
+    @Override public List<Account> findAll() {
+        return Collections.unmodifiableList(new ArrayList<>(accounts.values()));
     }
 
-    @Override public void update(Account account) {
-        accounts.put(account.getAccountNumber(), account);
-        saveAll();
+    @Override public Account update(Account account) {
+        if (accounts.containsKey(account.getAccountNumber())) {
+            accounts.put(account.getAccountNumber(), account);
+            saveAll();
+            return account;
+        }
+        return null;
     }
 
     @Override public void updateAll(Collection<Account> updated) {
