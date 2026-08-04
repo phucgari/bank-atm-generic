@@ -1,0 +1,4 @@
+# customerId|customerName|address|email|cardId|accountNumber
+C001|Nguyen Van An|12 Nguyen Hue, District 1, HCMC|an.nguyen@email.com|4921-XXXX-XXXX-1001|ACC001
+C002|Tran Thi Bich|45 Le Thanh Ton, District 1, HCMC|bich.tran@email.com|4921-XXXX-XXXX-1002|ACC002
+C003|Le Minh Cuong|88 Pham Ngoc Thach, District 3, HCMC|cuong.le@email.com|4921-XXXX-XXXX-1003|ACC003

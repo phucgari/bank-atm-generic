@@ -1,0 +1,671 @@
+@startuml class-diagram
+
+skinparam monochrome false
+skinparam shadowing false
+skinparam dpi 120
+skinparam defaultFontSize 11
+skinparam classBackgroundColor #FAFAFA
+skinparam classBorderColor #555555
+skinparam classFontStyle bold
+skinparam classAttributeFontSize 10
+skinparam arrowColor #444444
+skinparam arrowThickness 1.2
+skinparam packageBackgroundColor #F8F8F8
+skinparam packageBorderColor #888888
+skinparam packageFontStyle bold
+skinparam packageFontSize 12
+skinparam wrapWidth 200
+
+left to right direction
+
+title Bank ATM System -- Class Diagram
+
+' ============================================================
+' COLUMN 1: Enums + Config
+' ============================================================
+
+package "enums" as PKG_ENUMS #EDE7F6 {
+    enum AccountType {
+        SAVINGS
+        CURRENT
+    }
+    enum CardStatus {
+        ACTIVE
+        BLOCKED
+    }
+    enum TransferStatus {
+        ACTIVE
+        PAUSED
+        COMPLETED
+        FAILED
+        CANCELLED
+    }
+    enum TransferFrequency {
+        ONE_TIME
+        DAILY
+        WEEKLY
+        MONTHLY
+    }
+    enum TransactionType {
+        WITHDRAWAL
+        DEPOSIT
+        TRANSFER_OUT
+        TRANSFER_IN
+        INTEREST
+    }
+}
+
+package "config" as PKG_CONFIG #F9FBE7 {
+    class TransactionLimits <<constants>> {
+        + {static} WITHDRAWAL_DENOMINATION: long
+        + {static} MAX_WITHDRAWAL_SINGLE: long
+        + {static} MAX_WITHDRAWAL_DAILY: long
+        + {static} DEPOSIT_DENOMINATION: long
+        + {static} MAX_DEPOSIT_SINGLE: long
+        + {static} MAX_TRANSFER_SINGLE: long
+        + {static} MAX_TRANSFER_DAILY: long
+        + {static} MAX_SCHEDULED_ACTIVE: int
+        + {static} REPLENISH_DENOMINATION: long
+    }
+}
+
+' ============================================================
+' COLUMN 2: Strategy + State patterns
+' ============================================================
+
+package "model.strategy\n[Strategy Pattern]" as PKG_STRATEGY #E8F5E9 {
+    interface InterestStrategy <<interface>> {
+        + calculate(balance: long): long
+        + getMonthlyRate(): double
+    }
+    class CompoundInterestStrategy {
+        - monthlyRate: double
+        + calculate(balance: long): long
+        + getMonthlyRate(): double
+    }
+    class ZeroOnNegativeInterestStrategy {
+        - monthlyRate: double
+        + calculate(balance: long): long
+        + getMonthlyRate(): double
+    }
+    InterestStrategy <|.. CompoundInterestStrategy
+    InterestStrategy <|.. ZeroOnNegativeInterestStrategy
+}
+
+package "model.state\n[State Pattern]" as PKG_STATE #FFF3E0 {
+    interface CardState <<interface>> {
+        + canAcceptPin(): boolean
+        + onPinSuccess(): CardState
+        + onPinFailure(f: int, max: int): CardState
+        + onAdminUnblock(): CardState
+        + isBlocked(): boolean
+        + toStatus(): CardStatus
+    }
+    class ActiveCardState {
+        + isBlocked(): boolean
+        + toStatus(): CardStatus
+    }
+    class BlockedCardState {
+        + isBlocked(): boolean
+        + toStatus(): CardStatus
+    }
+    CardState <|.. ActiveCardState
+    CardState <|.. BlockedCardState
+
+    interface TransferLifecycleState <<interface>> {
+        + canExecute(): boolean
+        + canPause(): boolean
+        + canResume(): boolean
+        + canCancel(): boolean
+        + onExecuteSuccess(isLast: boolean): TransferLifecycleState
+        + onExecuteFailure(): TransferLifecycleState
+        + onPause(): TransferLifecycleState
+        + onResume(): TransferLifecycleState
+        + onCancel(): TransferLifecycleState
+        + toStatus(): TransferStatus
+    }
+    class ActiveTransferState {
+        + canExecute(): boolean
+        + canPause(): boolean
+        + canCancel(): boolean
+        + toStatus(): TransferStatus
+    }
+    class PausedTransferState {
+        + canResume(): boolean
+        + canCancel(): boolean
+        + toStatus(): TransferStatus
+    }
+    class CompletedTransferState {
+        + toStatus(): TransferStatus
+    }
+    class FailedTransferState {
+        + toStatus(): TransferStatus
+    }
+    class CancelledTransferState {
+        + toStatus(): TransferStatus
+    }
+    TransferLifecycleState <|.. ActiveTransferState
+    TransferLifecycleState <|.. PausedTransferState
+    TransferLifecycleState <|.. CompletedTransferState
+    TransferLifecycleState <|.. FailedTransferState
+    TransferLifecycleState <|.. CancelledTransferState
+}
+
+' ============================================================
+' COLUMN 3: Domain Model
+' ============================================================
+
+package "model" as PKG_MODEL #E3F2FD {
+    abstract class Account {
+        - accountNumber: String
+        - balance: long
+        - accountType: AccountType
+        - lastInterestYearMonth: String
+        - interestStrategy: InterestStrategy
+        --
+        + calculateInterest(): long
+        + getInterestRate(): double
+        + verifyWithdrawAmount(amount: long): boolean
+        + updateBalance(newBalance: long): void
+        + {abstract} getWithdrawalFloor(): long
+        + {abstract} getAccountTypeLabel(): String
+        + {abstract} getInsufficientFundsMessage(amount: long): String
+    }
+    class SavingsAccount {
+        + {static} MONTHLY_RATE: double = 0.005
+        + {static} MIN_BALANCE: long = 50000
+        + getWithdrawalFloor(): long
+        + getAccountTypeLabel(): String
+        + getInsufficientFundsMessage(amount: long): String
+    }
+    class CurrentAccount {
+        + {static} MONTHLY_RATE: double = 0.001
+        + {static} OVERDRAFT_LIMIT: long = -1000000
+        + getWithdrawalFloor(): long
+        + getAccountTypeLabel(): String
+        + getInsufficientFundsMessage(amount: long): String
+    }
+    class ATMCard {
+        - cardId: String
+        - pin: String
+        - accountNumber: String
+        - cardState: CardState
+        - failedAttempts: int
+        --
+        + isBlocked(): boolean
+        + canAcceptPin(): boolean
+        + recordPinSuccess(): void
+        + recordPinFailure(maxAttempts: int): void
+        + adminUnblock(): void
+        + getStatus(): CardStatus
+        + {static} stateFrom(status: CardStatus): CardState
+    }
+    class BankCustomer {
+        - customerId: String
+        - customerName: String
+        - accountNumber: String
+        - phoneNumber: String
+        - email: String
+    }
+    class Transaction {
+        - transactionId: String
+        - accountNumber: String
+        - dateTime: String
+        - type: TransactionType
+        - amount: long
+        - balanceAfter: long
+    }
+    class ScheduledTransfer {
+        - id: String
+        - sourceAccount: String
+        - destAccount: String
+        - amount: long
+        - frequency: TransferFrequency
+        - nextExecutionDate: String
+        - lifecycleState: TransferLifecycleState
+        - maxRepeat: int
+        - repeatCount: int
+        - endDate: String
+        --
+        + canExecute(): boolean
+        + canPause(): boolean
+        + canResume(): boolean
+        + canCancel(): boolean
+        + executeSuccess(isLast: boolean): void
+        + executeFail(): void
+        + pause(): void
+        + resume(): void
+        + cancel(): void
+        + complete(): void
+        + getStatus(): TransferStatus
+        + {static} stateFrom(status: TransferStatus): TransferLifecycleState
+    }
+
+    Account <|-- SavingsAccount
+    Account <|-- CurrentAccount
+    Account "1" o--> "1" InterestStrategy : <<Strategy>>
+    ATMCard "1" o--> "1" CardState         : <<State>>
+    ScheduledTransfer "1" o--> "1" TransferLifecycleState : <<State>>
+    Account ..> AccountType       : uses
+    ATMCard ..> CardStatus        : serialises
+    ScheduledTransfer ..> TransferStatus    : serialises
+    ScheduledTransfer ..> TransferFrequency : uses
+    Transaction ..> TransactionType : uses
+}
+
+' ============================================================
+' COLUMN 4: Command + DTOs
+' ============================================================
+
+package "command\n[Command Pattern]" as PKG_COMMAND #FCE4EC {
+    interface OperationResult <<interface>> {
+        + isSuccess(): boolean
+        + getMessage(): String
+    }
+    interface TransactionCommand <<interface>> {
+        + execute(): OperationResult
+        + getType(): String
+        + describe(): String
+    }
+    class WithdrawCommand {
+        - account: Account
+        - amount: long
+        + execute(): WithdrawalResult
+        + getType(): String
+        + describe(): String
+    }
+    class DepositCommand {
+        - account: Account
+        - amount: long
+        + execute(): DepositResult
+        + getType(): String
+        + describe(): String
+    }
+    class TransferCommand {
+        - source: Account
+        - destAccountNumber: String
+        - amount: long
+        + execute(): TransferResult
+        + getType(): String
+        + describe(): String
+    }
+    TransactionCommand <|.. WithdrawCommand
+    TransactionCommand <|.. DepositCommand
+    TransactionCommand <|.. TransferCommand
+}
+
+package "dto" as PKG_DTO #F3E5F5 {
+    class WithdrawalResult {
+        - success: boolean
+        - message: String
+        - transaction: Transaction
+        - dispensed: Map
+        - remainingAtmCash: long
+        --
+        + {static} success(...): WithdrawalResult
+        + {static} failure(msg: String): WithdrawalResult
+        + isSuccess(): boolean
+        + getMessage(): String
+    }
+    class DepositResult {
+        - success: boolean
+        - message: String
+        - transaction: Transaction
+        --
+        + {static} success(...): DepositResult
+        + {static} failure(msg: String): DepositResult
+        + isSuccess(): boolean
+        + getMessage(): String
+    }
+    class TransferResult {
+        - success: boolean
+        - message: String
+        - transaction: Transaction
+        - destCustomerName: String
+        --
+        + {static} success(...): TransferResult
+        + {static} failure(msg: String): TransferResult
+        + isSuccess(): boolean
+        + getMessage(): String
+    }
+    OperationResult <|.. WithdrawalResult
+    OperationResult <|.. DepositResult
+    OperationResult <|.. TransferResult
+}
+
+' ============================================================
+' COLUMN 5: Validation (Chain of Responsibility)
+' ============================================================
+
+package "validation\n[Chain of Responsibility]" as PKG_VALIDATION #E0F7FA {
+    interface TransactionValidator <<interface>> {
+        + validate(context: T): Optional
+        + then(next: TransactionValidator): TransactionValidator
+    }
+
+    package "validation.withdrawal" as PKG_VW #B2EBF2 {
+        class WithdrawalContext <<record>> {
+            account: Account
+            amount: long
+            dailyTotal: long
+            atmAvailableCash: long
+        }
+        class DenominationWithdrawalValidator
+        class SingleWithdrawalLimitValidator
+        class DailyWithdrawalLimitValidator
+        class AccountBalanceValidator
+        class AtmCashValidator
+
+        DenominationWithdrawalValidator --|> TransactionValidator
+        SingleWithdrawalLimitValidator  --|> TransactionValidator
+        DailyWithdrawalLimitValidator   --|> TransactionValidator
+        AccountBalanceValidator         --|> TransactionValidator
+        AtmCashValidator                --|> TransactionValidator
+    }
+
+    package "validation.deposit" as PKG_VD #B2EBF2 {
+        class DepositContext <<record>> {
+            account: Account
+            amount: long
+        }
+        class DenominationDepositValidator
+        class SingleDepositLimitValidator
+
+        DenominationDepositValidator --|> TransactionValidator
+        SingleDepositLimitValidator  --|> TransactionValidator
+    }
+
+    package "validation.transfer" as PKG_VT #B2EBF2 {
+        class TransferContext <<record>> {
+            source: Account
+            destAccountNumber: String
+            destAccount: Account
+            amount: long
+            dailyTotal: long
+        }
+        class SameAccountTransferValidator
+        class PositiveAmountTransferValidator
+        class SingleTransferLimitValidator
+        class DestinationExistsValidator
+        class DailyTransferLimitValidator
+        class BalanceTransferValidator
+
+        SameAccountTransferValidator    --|> TransactionValidator
+        PositiveAmountTransferValidator --|> TransactionValidator
+        SingleTransferLimitValidator    --|> TransactionValidator
+        DestinationExistsValidator      --|> TransactionValidator
+        DailyTransferLimitValidator     --|> TransactionValidator
+        BalanceTransferValidator        --|> TransactionValidator
+    }
+}
+
+' ============================================================
+' COLUMN 6: Repository interfaces + implementations
+' ============================================================
+
+package "repository (interfaces)" as PKG_REPO_IF #EFEBE9 {
+    interface AccountRepository <<interface>> {
+        + findByAccountNumber(no: String): Optional
+        + findAll(): Collection
+        + update(account: Account): void
+        + updateAll(accounts: Collection): void
+    }
+    interface CardRepository <<interface>> {
+        + findById(cardId: String): Optional
+        + update(card: ATMCard): void
+    }
+    interface CustomerRepository <<interface>> {
+        + findByAccountNumber(no: String): Optional
+        + findAll(): Collection
+    }
+    interface TransactionRepository <<interface>> {
+        + save(tx: Transaction): void
+        + findByAccountNumber(no: String): List
+        + sumByAccountNumberTypeAndDate(...): long
+    }
+    interface ScheduledTransferRepository <<interface>> {
+        + save(st: ScheduledTransfer): void
+        + update(st: ScheduledTransfer): void
+        + findById(id: String): Optional
+        + findBySourceAccount(no: String): List
+        + findAllActive(): List
+        + countActiveBySourceAccount(no: String): long
+    }
+    interface ATMInfoRepository <<interface>> {
+        + getBranchName(): String
+        + getLocation(): String
+        + getMaxCapacity(): long
+    }
+    interface DenominationRepository <<interface>> {
+        + getDenominations(): Map
+        + getTotalCash(): long
+        + isValidDenomination(denom: long): boolean
+        + replenish(denom: long, qty: int): boolean
+    }
+    interface AdminLogRepository <<interface>> {
+        + log(dateTime: String, user: String, action: String): void
+    }
+}
+
+package "repository.file\n(text-file implementations)" as PKG_REPO_IMPL #D7CCC8 {
+    class FileAccountRepository {
+        - accounts: Map
+        - load(): void
+        - parseAccount(parts: String[]): Account
+        - saveAll(): void
+    }
+    class FileCardRepository {
+        - cards: Map
+    }
+    class FileCustomerRepository {
+        - customers: Map
+    }
+    class FileTransactionRepository {
+        - transactions: List
+    }
+    class FileScheduledTransferRepository {
+        - transfers: Map
+    }
+    class FileATMConfigRepository {
+        - branchName: String
+        - location: String
+        - maxCapacity: long
+        - denominations: Map
+    }
+    class FileAdminLogRepository
+
+    AccountRepository           <|.. FileAccountRepository
+    CardRepository              <|.. FileCardRepository
+    CustomerRepository          <|.. FileCustomerRepository
+    TransactionRepository       <|.. FileTransactionRepository
+    ScheduledTransferRepository <|.. FileScheduledTransferRepository
+    ATMInfoRepository           <|.. FileATMConfigRepository
+    DenominationRepository      <|.. FileATMConfigRepository
+    AdminLogRepository          <|.. FileAdminLogRepository
+}
+
+' ============================================================
+' COLUMN 7: Service + Session + App
+' ============================================================
+
+package "service (interfaces + hardware)" as PKG_SVC #FFF8E1 {
+    interface WithdrawalService <<interface>> {
+        + withdraw(account: Account, amount: long): WithdrawalResult
+    }
+    interface DepositService <<interface>> {
+        + deposit(account: Account, amount: long): DepositResult
+    }
+    interface TransferService <<interface>> {
+        + transfer(src: Account, dest: String, amount: long): TransferResult
+        + processScheduledTransfers(): void
+    }
+    interface InterestService <<interface>> {
+        + calculateInterestForAll(): List
+    }
+    class DisplayScreen {
+        + println(text: String): void
+        + print(text: String): void
+        + acceptInput(): String
+        + readPin(prompt: String): String
+    }
+    class CardScanner {
+        + {static} MAX_PIN_ATTEMPTS: int = 3
+        - cardRepo: CardRepository
+        - screen: DisplayScreen
+        + acceptCard(cardId: String): Optional
+        + validatePin(card: ATMCard, pin: String): boolean
+        + readCard(card: ATMCard): void
+        + ejectCard(card: ATMCard): void
+    }
+    class CashDispenser {
+        - denomRepo: DenominationRepository
+        + getAvailableCash(): long
+        + dispenseCash(amount: long): Map
+        + acceptAmount(amount: long): void
+    }
+    class ReceiptPrinter {
+        - screen: DisplayScreen
+        + printReceipt(...): void
+        + printBillBreakdown(dispensed: Map): void
+    }
+    class ATM {
+        - atmConfig: ATMInfoRepository
+        + show(screen: DisplayScreen): void
+    }
+}
+
+package "service.impl" as PKG_SVC_IMPL #FFE0B2 {
+    class WithdrawalServiceImpl {
+        - accountRepo: AccountRepository
+        - txRepo: TransactionRepository
+        - cashDispenser: CashDispenser
+        - validationChain: TransactionValidator
+        + withdraw(account: Account, amount: long): WithdrawalResult
+    }
+    class DepositServiceImpl {
+        - accountRepo: AccountRepository
+        - txRepo: TransactionRepository
+        - cashDispenser: CashDispenser
+        - validationChain: TransactionValidator
+        + deposit(account: Account, amount: long): DepositResult
+    }
+    class TransferServiceImpl {
+        - accountRepo: AccountRepository
+        - txRepo: TransactionRepository
+        - schedRepo: ScheduledTransferRepository
+        - customerRepo: CustomerRepository
+        - validationChain: TransactionValidator
+        + transfer(src: Account, dest: String, amount: long): TransferResult
+        + processScheduledTransfers(): void
+    }
+    class InterestServiceImpl {
+        - accountRepo: AccountRepository
+        - txRepo: TransactionRepository
+        + calculateInterestForAll(): List
+    }
+    WithdrawalService <|.. WithdrawalServiceImpl
+    DepositService    <|.. DepositServiceImpl
+    TransferService   <|.. TransferServiceImpl
+    InterestService   <|.. InterestServiceImpl
+}
+
+package "session" as PKG_SESSION #E8EAF6 {
+    class CustomerSessionDeps <<record>> {
+        + screen: DisplayScreen
+        + cardScanner: CardScanner
+        + cashDispenser: CashDispenser
+        + receiptPrinter: ReceiptPrinter
+        + withdrawalService: WithdrawalService
+        + depositService: DepositService
+        + transferService: TransferService
+        + accountRepo: AccountRepository
+        + txRepo: TransactionRepository
+        + customerRepo: CustomerRepository
+        + cardRepo: CardRepository
+        + schedRepo: ScheduledTransferRepository
+        + atmInfo: ATMInfoRepository
+    }
+    class AdminSessionDeps <<record>> {
+        + screen: DisplayScreen
+        + interestService: InterestService
+        + atmInfo: ATMInfoRepository
+        + denomRepo: DenominationRepository
+        + accountRepo: AccountRepository
+        + customerRepo: CustomerRepository
+        + cardRepo: CardRepository
+        + adminLog: AdminLogRepository
+    }
+    class CustomerSession {
+        + CustomerSession(deps: CustomerSessionDeps)
+        + run(): void
+    }
+    class AdminSession {
+        + AdminSession(deps: AdminSessionDeps)
+        + run(): void
+    }
+    CustomerSession *-- CustomerSessionDeps : deps
+    AdminSession    *-- AdminSessionDeps    : deps
+}
+
+package "app (composition root)" as PKG_APP #ECEFF1 {
+    class App {
+        + {static} main(args: String[]): void
+    }
+}
+
+' ============================================================
+' CROSS-PACKAGE RELATIONSHIPS
+' ============================================================
+
+' Service implementations
+WithdrawalServiceImpl --> AccountRepository
+WithdrawalServiceImpl --> TransactionRepository
+WithdrawalServiceImpl --> CashDispenser
+WithdrawalServiceImpl ..> TransactionValidator : uses CoR chain
+
+DepositServiceImpl --> AccountRepository
+DepositServiceImpl --> TransactionRepository
+DepositServiceImpl --> CashDispenser
+DepositServiceImpl ..> TransactionValidator : uses CoR chain
+
+TransferServiceImpl --> AccountRepository
+TransferServiceImpl --> TransactionRepository
+TransferServiceImpl --> ScheduledTransferRepository
+TransferServiceImpl --> CustomerRepository
+TransferServiceImpl ..> TransactionValidator : uses CoR chain
+TransferServiceImpl ..> TransferCommand     : creates
+
+InterestServiceImpl --> AccountRepository
+InterestServiceImpl --> TransactionRepository
+
+' Hardware
+CardScanner   --> CardRepository
+CardScanner   --> DisplayScreen
+CardScanner   ..> ATMCard : uses State methods
+CashDispenser --> DenominationRepository
+ReceiptPrinter --> DisplayScreen
+ATM           --> ATMInfoRepository
+
+' Commands use services
+WithdrawCommand --> WithdrawalService
+DepositCommand  --> DepositService
+TransferCommand --> TransferService
+
+' Session uses commands
+CustomerSession ..> WithdrawCommand : creates
+CustomerSession ..> DepositCommand  : creates
+CustomerSession ..> TransferCommand : creates
+AdminSession    ..> ATMCard         : adminUnblock()
+
+' Repository file impls inject strategies and states
+FileAccountRepository ..> CompoundInterestStrategy     : injects
+FileAccountRepository ..> ZeroOnNegativeInterestStrategy : injects
+FileCardRepository    ..> ActiveCardState  : via stateFrom()
+FileCardRepository    ..> BlockedCardState : via stateFrom()
+FileScheduledTransferRepository ..> ActiveTransferState : via stateFrom()
+
+' App
+App ..> CustomerSession     : creates
+App ..> AdminSession        : creates
+
+@enduml
