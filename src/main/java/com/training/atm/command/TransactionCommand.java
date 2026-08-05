@@ -1,5 +1,7 @@
 package com.training.atm.command;
 
+import com.training.atm.dto.ServiceResult;
+
 /**
  * Command interface for ATM transaction operations.
  *

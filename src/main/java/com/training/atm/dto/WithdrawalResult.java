@@ -10,19 +10,14 @@ import java.util.Map;
  * Implements {@link OperationResult} so the scheduler can handle any
  * {@code TransactionCommand<?>} uniformly.
  */
-public final class WithdrawalResult implements OperationResult {
-    private final boolean            success;
-    private final String             message;
-    private final Transaction        transaction;
+public final class WithdrawalResult extends ServiceResult<Transaction> implements OperationResult {
     private final Map<Long, Integer> dispensed;
-    private final long               remainingAtmCash;
+    private final long remainingAtmCash;
 
     private WithdrawalResult(boolean success, String message, Transaction transaction,
-                              Map<Long, Integer> dispensed, long remainingAtmCash) {
-        this.success          = success;
-        this.message          = message;
-        this.transaction      = transaction;
-        this.dispensed        = dispensed;
+                             Map<Long, Integer> dispensed, long remainingAtmCash) {
+        super(success, transaction, message, ErrorCode.SUCCESS);
+        this.dispensed = dispensed;
         this.remainingAtmCash = remainingAtmCash;
     }
 
@@ -34,9 +29,15 @@ public final class WithdrawalResult implements OperationResult {
         return new WithdrawalResult(false, message, null, null, 0);
     }
 
-    @Override public boolean            isSuccess()          { return success; }
-    @Override public String             getMessage()         { return message; }
-    public    Transaction               getTransaction()     { return transaction; }
-    public    Map<Long, Integer>        getDispensed()       { return dispensed; }
-    public    long                      getRemainingAtmCash(){ return remainingAtmCash; }
+    public Transaction getTransaction() {
+        return getData();
+    }
+
+    public Map<Long, Integer> getDispensed() {
+        return dispensed;
+    }
+
+    public long getRemainingAtmCash() {
+        return remainingAtmCash;
+    }
 }
