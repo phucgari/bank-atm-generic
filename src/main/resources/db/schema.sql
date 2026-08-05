@@ -1,92 +1,91 @@
 -- H2 database schema in MySQL compatibility mode (MODE=MySQL).
---
--- The application's repository layer currently persists to the pipe-delimited
--- text files under data/. This schema mirrors the same entity model so the
--- data is available through JDBC (H2) for reporting, the H2 Console, or a
--- future migration of the File*Repository implementations.
-
--- -------- customers ----------------------------------------------------------
--- Format mirror: customers.txt  ->  customerId|name|address|email|cardId|accountNumber
-CREATE TABLE IF NOT EXISTS customers (
-    customer_id    VARCHAR(20)  PRIMARY KEY,
-    customer_name  VARCHAR(100) NOT NULL,
-    address        VARCHAR(255),
-    email          VARCHAR(100),
-    card_id        VARCHAR(30)  NOT NULL,
-    account_number VARCHAR(20)  NOT NULL
-);
+-- Defines the bank ATM domain model described in the current ERD.
 
 -- -------- accounts -----------------------------------------------------------
--- Format mirror: accounts.txt  ->  accountNumber|type|balance|lastInterestYearMonth
 CREATE TABLE IF NOT EXISTS accounts (
-    account_number           VARCHAR(20) PRIMARY KEY,
-    account_type             ENUM('SAVINGS', 'CURRENT') NOT NULL,
-    balance                  BIGINT      NOT NULL DEFAULT 0,
-    last_interest_year_month VARCHAR(7)  NOT NULL DEFAULT ''
+    account_id       VARCHAR(30) PRIMARY KEY,
+    account_number   VARCHAR(20) NOT NULL UNIQUE,
+    balance          DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    interest_rate    DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+    account_type     VARCHAR(20) NOT NULL,
+    min_balance      DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    overdraft_limit  DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_accounts_type CHECK (account_type IN ('SAVINGS', 'CURRENT'))
 );
 
--- -------- cards ---------------------------------------------------------------
--- Format mirror: cards.txt  ->  cardId|pin|accountNumber|status|failedAttempts
-CREATE TABLE IF NOT EXISTS cards (
-    card_id         VARCHAR(30) PRIMARY KEY,
-    pin             VARCHAR(10) NOT NULL,
-    account_number  VARCHAR(20) NOT NULL,
-    status          ENUM('ACTIVE', 'BLOCKED') NOT NULL DEFAULT 'ACTIVE',
-    failed_attempts INT         NOT NULL DEFAULT 0,
-    CONSTRAINT fk_cards_account FOREIGN KEY (account_number) REFERENCES accounts (account_number)
+-- -------- atm_cards ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS atm_cards (
+    card_id            VARCHAR(30) PRIMARY KEY,
+    pin_hash           VARCHAR(64) NOT NULL,
+    status             VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    failed_attempts    INT NOT NULL DEFAULT 0,
+    linked_account_id  VARCHAR(30) NOT NULL UNIQUE,
+    CONSTRAINT chk_atm_cards_status CHECK (status IN ('ACTIVE', 'BLOCKED')),
+    CONSTRAINT fk_atm_cards_account FOREIGN KEY (linked_account_id) REFERENCES accounts (account_id)
 );
 
--- -------- transactions ---------------------------------------------------------
--- Format mirror: transactions.txt  ->  txId|accountNumber|dateTime|type|amount|balanceAfter|description
+-- -------- customers ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS customers (
+    customer_id VARCHAR(30) PRIMARY KEY,
+    name        VARCHAR(100) NOT NULL,
+    address     VARCHAR(255),
+    email       VARCHAR(100) NOT NULL UNIQUE,
+    card_id     VARCHAR(30) UNIQUE,
+    account_id  VARCHAR(30) UNIQUE,
+    CONSTRAINT fk_customers_card FOREIGN KEY (card_id) REFERENCES atm_cards (card_id),
+    CONSTRAINT fk_customers_account FOREIGN KEY (account_id) REFERENCES accounts (account_id)
+);
+
+-- -------- transactions ------------------------------------------------------
 CREATE TABLE IF NOT EXISTS transactions (
-    transaction_id  VARCHAR(40) PRIMARY KEY,
-    account_number  VARCHAR(20) NOT NULL,
-    date_time       DATETIME    NOT NULL,
-    type            ENUM('DEPOSIT', 'WITHDRAWAL', 'INTEREST', 'TRANSFER_OUT', 'TRANSFER_IN') NOT NULL,
-    amount          BIGINT      NOT NULL,
-    balance_after   BIGINT      NOT NULL,
-    description     VARCHAR(255),
-    CONSTRAINT fk_transactions_account FOREIGN KEY (account_number) REFERENCES accounts (account_number)
+    transaction_id VARCHAR(40) PRIMARY KEY,
+    account_id     VARCHAR(30) NOT NULL,
+    type           VARCHAR(20) NOT NULL,
+    amount         DECIMAL(15,2) NOT NULL,
+    balance_after  DECIMAL(15,2) NOT NULL,
+    created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_transactions_type CHECK (type IN ('DEPOSIT', 'WITHDRAWAL', 'TRANSFER_IN', 'TRANSFER_OUT', 'INTEREST')),
+    CONSTRAINT fk_transactions_account FOREIGN KEY (account_id) REFERENCES accounts (account_id)
 );
 
--- -------- scheduled_transfers ---------------------------------------------------
--- Format mirror: scheduled_transfers.txt
---   id|sourceAccount|destAccount|amount|frequency|nextExecutionDate|status|maxRepeat|repeatCount|endDate
+CREATE INDEX IF NOT EXISTS idx_transactions_account_created
+    ON transactions (account_id, created_at);
+
+-- -------- scheduled_transfers ----------------------------------------------
 CREATE TABLE IF NOT EXISTS scheduled_transfers (
-    id                  VARCHAR(40) PRIMARY KEY,
-    source_account      VARCHAR(20) NOT NULL,
-    dest_account        VARCHAR(20) NOT NULL,
-    amount              BIGINT      NOT NULL,
-    frequency           ENUM('ONE_TIME', 'DAILY', 'WEEKLY', 'MONTHLY') NOT NULL,
-    next_execution_date DATE        NOT NULL,
-    status              ENUM('ACTIVE', 'PAUSED', 'COMPLETED', 'FAILED', 'CANCELLED') NOT NULL,
-    max_repeat          INT         NOT NULL,
-    repeat_count        INT         NOT NULL DEFAULT 0,
-    end_date            DATE,
-    CONSTRAINT fk_st_source FOREIGN KEY (source_account) REFERENCES accounts (account_number),
-    CONSTRAINT fk_st_dest   FOREIGN KEY (dest_account)   REFERENCES accounts (account_number)
+    transfer_id      VARCHAR(40) PRIMARY KEY,
+    source_account_id VARCHAR(30) NOT NULL,
+    dest_account_id   VARCHAR(30) NOT NULL,
+    amount           DECIMAL(15,2) NOT NULL,
+    frequency        VARCHAR(20) NOT NULL,
+    next_execution   TIMESTAMP NOT NULL,
+    status           VARCHAR(20) NOT NULL,
+    max_repeats      INT NOT NULL,
+    executed_count   INT NOT NULL DEFAULT 0,
+    CONSTRAINT chk_scheduled_frequency CHECK (frequency IN ('DAILY', 'WEEKLY', 'MONTHLY')),
+    CONSTRAINT chk_scheduled_status CHECK (status IN ('ACTIVE', 'PAUSED', 'COMPLETED', 'FAILED')),
+    CONSTRAINT fk_scheduled_source FOREIGN KEY (source_account_id) REFERENCES accounts (account_id),
+    CONSTRAINT fk_scheduled_dest FOREIGN KEY (dest_account_id) REFERENCES accounts (account_id)
 );
 
--- -------- atm_info ----------------------------------------------------------------
--- Format mirror: atm.txt  ->  location|branchName  (single row)
-CREATE TABLE IF NOT EXISTS atm_info (
-    id          INT PRIMARY KEY,
-    location    VARCHAR(100),
-    branch_name VARCHAR(100)
+-- -------- atm_machines ------------------------------------------------------
+CREATE TABLE IF NOT EXISTS atm_machines (
+    atm_id                VARCHAR(30) PRIMARY KEY,
+    location              VARCHAR(255) NOT NULL,
+    branch_name           VARCHAR(100) NOT NULL,
+    total_cash            BIGINT NOT NULL DEFAULT 0,
+    denomination_500k     INT NOT NULL DEFAULT 0,
+    denomination_200k     INT NOT NULL DEFAULT 0,
+    denomination_100k     INT NOT NULL DEFAULT 0,
+    denomination_50k      INT NOT NULL DEFAULT 0
 );
 
--- -------- denominations -----------------------------------------------------------
--- Format mirror: denominations.txt  ->  denomination|count  (one per line)
-CREATE TABLE IF NOT EXISTS denominations (
-    denomination BIGINT PRIMARY KEY,
-    bill_count   INT  NOT NULL DEFAULT 0
-);
-
--- -------- admin_log -------------------------------------------------------------
--- Format mirror: admin_log.txt  ->  timestamp|adminUser|action  (append-only)
-CREATE TABLE IF NOT EXISTS admin_log (
-    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
-    log_time   DATETIME     NOT NULL,
-    admin_user VARCHAR(50)  NOT NULL,
-    action     VARCHAR(255) NOT NULL
+-- -------- admin_audit_log ---------------------------------------------------
+CREATE TABLE IF NOT EXISTS admin_audit_log (
+    log_id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    admin_username  VARCHAR(100) NOT NULL,
+    action          VARCHAR(255) NOT NULL,
+    details         VARCHAR(1000),
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

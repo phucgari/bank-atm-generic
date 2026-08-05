@@ -8,11 +8,12 @@ import com.training.atm.model.state.TransferLifecycleState;
 import com.training.atm.repository.ScheduledTransferRepository;
 import com.training.atm.util.DateUtil;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,44 +21,37 @@ import java.util.Optional;
 
 /**
  * H2 (JDBC) implementation of {@link ScheduledTransferRepository}.
- *
- * <p>Mirrors {@code scheduled_transfers.txt}
- * (id|sourceAccount|destAccount|amount|frequency|nextExecutionDate|status|maxRepeat|repeatCount|endDate)
- * mapped onto the {@code scheduled_transfers} table.  State pattern preserved:
- * the persisted {@link TransferStatus} is only a serialisation token; {@code mapRow}
- * uses {@link ScheduledTransfer#stateFrom(TransferStatus)} to rebuild the runtime
- * {@link TransferLifecycleState} object.
  */
 public class JdbcScheduledTransferRepository extends AbstractJdbcRepository<ScheduledTransfer, String> implements ScheduledTransferRepository {
 
     private static final String INSERT =
-            "INSERT INTO scheduled_transfers (id, source_account, dest_account, amount,"
-                    + " frequency, next_execution_date, status, max_repeat, repeat_count, end_date)"
-                    + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            "INSERT INTO scheduled_transfers (transfer_id, source_account_id, dest_account_id, amount,"
+                    + " frequency, next_execution, status, max_repeats, executed_count)"
+                    + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     private static final String UPDATE =
-            "UPDATE scheduled_transfers SET source_account = ?, dest_account = ?, amount = ?,"
-                    + " frequency = ?, next_execution_date = ?, status = ?, max_repeat = ?,"
-                    + " repeat_count = ?, end_date = ? WHERE id = ?";
+            "UPDATE scheduled_transfers SET source_account_id = ?, dest_account_id = ?, amount = ?,"
+                    + " frequency = ?, next_execution = ?, status = ?, max_repeats = ?,"
+                    + " executed_count = ? WHERE transfer_id = ?";
 
     private static final String SELECT_BY_ID =
-            "SELECT id, source_account, dest_account, amount, frequency, next_execution_date,"
-                    + " status, max_repeat, repeat_count, end_date FROM scheduled_transfers"
-                    + " WHERE id = ?";
+            "SELECT transfer_id, source_account_id, dest_account_id, amount, frequency, next_execution,"
+                    + " status, max_repeats, executed_count FROM scheduled_transfers"
+                    + " WHERE transfer_id = ?";
 
     private static final String SELECT_BY_SOURCE =
-            "SELECT id, source_account, dest_account, amount, frequency, next_execution_date,"
-                    + " status, max_repeat, repeat_count, end_date FROM scheduled_transfers"
-                    + " WHERE source_account = ? ORDER BY next_execution_date";
+            "SELECT transfer_id, source_account_id, dest_account_id, amount, frequency, next_execution,"
+                    + " status, max_repeats, executed_count FROM scheduled_transfers"
+                    + " WHERE source_account_id = ? ORDER BY next_execution";
 
     private static final String SELECT_ACTIVE =
-            "SELECT id, source_account, dest_account, amount, frequency, next_execution_date,"
-                    + " status, max_repeat, repeat_count, end_date FROM scheduled_transfers"
-                    + " WHERE status = 'ACTIVE' ORDER BY next_execution_date";
+            "SELECT transfer_id, source_account_id, dest_account_id, amount, frequency, next_execution,"
+                    + " status, max_repeats, executed_count FROM scheduled_transfers"
+                    + " WHERE status = 'ACTIVE' ORDER BY next_execution";
 
     private static final String COUNT_ACTIVE_BY_SOURCE =
             "SELECT COUNT(*) FROM scheduled_transfers"
-                    + " WHERE source_account = ? AND status = 'ACTIVE'";
+                    + " WHERE source_account_id = ? AND status = 'ACTIVE'";
 
     public JdbcScheduledTransferRepository(ConnectionManager connectionManager) {
         super(connectionManager);
@@ -81,7 +75,7 @@ public class JdbcScheduledTransferRepository extends AbstractJdbcRepository<Sche
         try (Connection conn = connectionManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(UPDATE)) {
             setCommonParameters(ps, st, 1);
-            ps.setString(10, st.getId());
+            ps.setString(9, st.getId());
             ps.executeUpdate();
             return st;
         } catch (SQLException e) {
@@ -122,13 +116,12 @@ public class JdbcScheduledTransferRepository extends AbstractJdbcRepository<Sche
             throws SQLException {
         ps.setString(start, st.getSourceAccount());
         ps.setString(start + 1, st.getDestAccount());
-        ps.setLong(start + 2, st.getAmount());
+        ps.setBigDecimal(start + 2, BigDecimal.valueOf(st.getAmount()));
         ps.setString(start + 3, st.getFrequency().name());
-        ps.setDate(start + 4, toDate(st.getNextExecutionDate()));
-        ps.setString(start + 5, st.getStatus().name());   // getStatus() delegates to state
+        ps.setTimestamp(start + 4, Timestamp.valueOf(LocalDate.parse(st.getNextExecutionDate(), DateUtil.DATE_FMT).atStartOfDay()));
+        ps.setString(start + 5, st.getStatus().name());
         ps.setInt(start + 6, st.getMaxRepeat());
         ps.setInt(start + 7, st.getRepeatCount());
-        ps.setDate(start + 8, toDateOrNull(st.getEndDate()));
     }
 
     private Optional<ScheduledTransfer> querySingle(String sql, String value) {
@@ -179,28 +172,18 @@ public class JdbcScheduledTransferRepository extends AbstractJdbcRepository<Sche
     @Override
     protected ScheduledTransfer mapRow(ResultSet rs) throws SQLException {
         TransferLifecycleState state =
-                ScheduledTransfer.stateFrom(TransferStatus.valueOf(rs.getString("status"))); // State pattern
-        Date endDate = rs.getDate("end_date");
+                ScheduledTransfer.stateFrom(TransferStatus.valueOf(rs.getString("status")));
         return new ScheduledTransfer(
-                rs.getString("id"),
-                rs.getString("source_account"),
-                rs.getString("dest_account"),
-                rs.getLong("amount"),
+                rs.getString("transfer_id"),
+                rs.getString("source_account_id"),
+                rs.getString("dest_account_id"),
+                rs.getBigDecimal("amount").longValueExact(),
                 TransferFrequency.valueOf(rs.getString("frequency")),
-                rs.getDate("next_execution_date").toLocalDate().format(DateUtil.DATE_FMT),
+                rs.getTimestamp("next_execution").toLocalDateTime().toLocalDate().format(DateUtil.DATE_FMT),
                 state,
-                rs.getInt("max_repeat"),
-                rs.getInt("repeat_count"),
-                endDate != null ? endDate.toLocalDate().format(DateUtil.DATE_FMT) : "");
-    }
-
-    private Date toDate(String date) {
-        return Date.valueOf(LocalDate.parse(date, DateUtil.DATE_FMT));
-    }
-
-    private Date toDateOrNull(String date) {
-        if (date == null || date.isEmpty()) return null;
-        return toDate(date);
+                0,
+                rs.getInt("executed_count"),
+                "");
     }
 
     @Override
@@ -210,7 +193,7 @@ public class JdbcScheduledTransferRepository extends AbstractJdbcRepository<Sche
 
     @Override
     protected String getIdColumnName() {
-        return "id";
+        return "transfer_id";
     }
 
     @Override
@@ -222,7 +205,7 @@ public class JdbcScheduledTransferRepository extends AbstractJdbcRepository<Sche
     @Override
     protected void setUpdateParameters(PreparedStatement ps, ScheduledTransfer entity) throws SQLException {
         setCommonParameters(ps, entity, 1);
-        ps.setString(10, entity.getId());
+        ps.setString(9, entity.getId());
     }
 
     @Override

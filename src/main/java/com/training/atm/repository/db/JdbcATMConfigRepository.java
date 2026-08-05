@@ -9,52 +9,35 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
  * H2 (JDBC) implementation of both {@link ATMInfoRepository} and
  * {@link DenominationRepository}.
- *
- * <p>Mirrors the file-based implementation: ATM metadata comes from the single-row
- * {@code atm_info} table and cash inventory from the {@code denominations} table.
- * Like {@link com.training.atm.repository.file.FileATMConfigRepository}, both
- * concerns are exposed through two separate interfaces (ISP) while sharing one
- * implementation class.
  */
 public class JdbcATMConfigRepository extends AbstractJdbcRepository<ATMConfig, Integer> implements ATMInfoRepository, DenominationRepository {
 
     private static final long MAX_CAPACITY = 500_000_000L;
-
-    /** Denominations available for dispensing, ordered largest-first. */
     private static final long[] DENOM_ORDER = {500_000L, 200_000L, 100_000L, 50_000L};
-
-    /**
-     * The denomination slot that receives deposited cash (smallest cassette).
-     */
     private static final long DEPOSIT_INTAKE_DENOMINATION = 50_000L;
 
     private static final String SELECT_ATM =
-            "SELECT location, branch_name FROM atm_info WHERE id = 1";
-
-    private static final String SELECT_DENOMINATIONS =
-            "SELECT denomination, bill_count FROM denominations ORDER BY denomination DESC";
+            "SELECT atm_id, location, branch_name, total_cash, denomination_500k, denomination_200k, denomination_100k, denomination_50k"
+                    + " FROM atm_machines ORDER BY atm_id LIMIT 1";
 
     private static final String SELECT_TOTAL_CASH =
-            "SELECT COALESCE(SUM(denomination * bill_count), 0) FROM denominations";
+            "SELECT total_cash FROM atm_machines ORDER BY atm_id LIMIT 1";
 
-    private static final String UPDATE_BILL_COUNT =
-            "UPDATE denominations SET bill_count = bill_count + ? WHERE denomination = ?";
-
-    private static final String UPSERT_BILL_COUNT =
-            "INSERT INTO denominations (denomination, bill_count) VALUES (?, ?)"
-                    + " ON DUPLICATE KEY UPDATE bill_count = bill_count + VALUES(bill_count)";
+    private static final String INSERT_ATM =
+            "INSERT INTO atm_machines (atm_id, location, branch_name, total_cash, denomination_500k, denomination_200k, denomination_100k, denomination_50k)"
+                    + " VALUES (?, ?, ?, 0, 0, 0, 0, 0)";
 
     public JdbcATMConfigRepository(ConnectionManager connectionManager) {
         super(connectionManager);
     }
 
-    // --- ATMInfoRepository ---
     @Override
     public String getLocation() {
         try (Connection conn = connectionManager.getConnection();
@@ -88,27 +71,31 @@ public class JdbcATMConfigRepository extends AbstractJdbcRepository<ATMConfig, I
         return MAX_CAPACITY;
     }
 
-    // --- DenominationRepository ---
     @Override
     public long getTotalCash() {
         try (Connection conn = connectionManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(SELECT_TOTAL_CASH);
              ResultSet rs = ps.executeQuery()) {
-            rs.next();
-            return rs.getLong(1);
+            if (rs.next()) {
+                return rs.getLong("total_cash");
+            }
         } catch (SQLException e) {
             throw new RuntimeException("Error loading total ATM cash from database", e);
         }
+        return 0L;
     }
 
     @Override
     public Map<Long, Integer> getDenominations() {
         Map<Long, Integer> denominations = new LinkedHashMap<>();
         try (Connection conn = connectionManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(SELECT_DENOMINATIONS);
+             PreparedStatement ps = conn.prepareStatement(SELECT_ATM);
              ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                denominations.put(rs.getLong("denomination"), rs.getInt("bill_count"));
+            if (rs.next()) {
+                denominations.put(500_000L, rs.getInt("denomination_500k"));
+                denominations.put(200_000L, rs.getInt("denomination_200k"));
+                denominations.put(100_000L, rs.getInt("denomination_100k"));
+                denominations.put(50_000L, rs.getInt("denomination_50k"));
             }
         } catch (SQLException e) {
             throw new RuntimeException("Error loading denominations from database", e);
@@ -128,14 +115,11 @@ public class JdbcATMConfigRepository extends AbstractJdbcRepository<ATMConfig, I
         try {
             conn = connectionManager.getConnection();
             conn.setAutoCommit(false);
-            try (PreparedStatement ps = conn.prepareStatement(UPDATE_BILL_COUNT)) {
-                for (Map.Entry<Long, Integer> entry : dispensed.entrySet()) {
-                    ps.setInt(1, -entry.getValue());
-                    ps.setLong(2, entry.getKey());
-                    ps.addBatch();
-                }
-                ps.executeBatch();
+            long atmId = ensureAtmMachine(conn);
+            for (Map.Entry<Long, Integer> entry : dispensed.entrySet()) {
+                adjustDenomination(conn, atmId, entry.getKey(), -entry.getValue());
             }
+            updateTotalCash(conn, atmId);
             conn.commit();
         } catch (SQLException e) {
             rollback(conn);
@@ -160,13 +144,50 @@ public class JdbcATMConfigRepository extends AbstractJdbcRepository<ATMConfig, I
     }
 
     private void upsertBills(long denom, int count) {
-        try (Connection conn = connectionManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(UPSERT_BILL_COUNT)) {
-            ps.setLong(1, denom);
-            ps.setInt(2, count);
-            ps.executeUpdate();
+        try (Connection conn = connectionManager.getConnection()) {
+            long atmId = ensureAtmMachine(conn);
+            adjustDenomination(conn, atmId, denom, count);
+            updateTotalCash(conn, atmId);
         } catch (SQLException e) {
             throw new RuntimeException("Error updating bill count for denomination: " + denom, e);
+        }
+    }
+
+    private long ensureAtmMachine(Connection conn) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(SELECT_ATM);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return 1L;
+            }
+        }
+        try (PreparedStatement ps = conn.prepareStatement(INSERT_ATM)) {
+            ps.setString(1, "1");
+            ps.setString(2, "Main Branch");
+            ps.setString(3, "Main Branch");
+            ps.executeUpdate();
+        }
+        return 1L;
+    }
+
+    private void adjustDenomination(Connection conn, long atmId, long denom, int delta) throws SQLException {
+        String column = switch ((int) denom) {
+            case 500_000 -> "denomination_500k";
+            case 200_000 -> "denomination_200k";
+            case 100_000 -> "denomination_100k";
+            case 50_000 -> "denomination_50k";
+            default -> throw new IllegalArgumentException("Unsupported denomination: " + denom);
+        };
+        try (PreparedStatement ps = conn.prepareStatement("UPDATE atm_machines SET " + column + " = " + column + " + ? WHERE atm_id = ?")) {
+            ps.setInt(1, delta);
+            ps.setString(2, "1");
+            ps.executeUpdate();
+        }
+    }
+
+    private void updateTotalCash(Connection conn, long atmId) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement("UPDATE atm_machines SET total_cash = (denomination_500k * 500000 + denomination_200k * 200000 + denomination_100k * 100000 + denomination_50k * 50000) WHERE atm_id = ?")) {
+            ps.setString(1, "1");
+            ps.executeUpdate();
         }
     }
 
@@ -191,46 +212,50 @@ public class JdbcATMConfigRepository extends AbstractJdbcRepository<ATMConfig, I
         }
     }
 
-    // --- AbstractJdbcRepository abstract methods ---
     @Override
     protected String getTableName() {
-        return "atm_info";
+        return "atm_machines";
     }
 
     @Override
     protected String getIdColumnName() {
-        return "id";
+        return "atm_id";
     }
 
     @Override
     protected ATMConfig mapRow(ResultSet rs) throws SQLException {
         return new ATMConfig(
-                rs.getInt("id"),
+                1,
                 rs.getString("location"),
                 rs.getString("branch_name"));
     }
 
     @Override
     protected void setInsertParameters(PreparedStatement ps, ATMConfig entity) throws SQLException {
-        ps.setInt(1, entity.getId());
+        ps.setString(1, String.valueOf(entity.getId()));
         ps.setString(2, entity.getLocation());
         ps.setString(3, entity.getBranchName());
+        ps.setLong(4, 0L);
+        ps.setInt(5, 0);
+        ps.setInt(6, 0);
+        ps.setInt(7, 0);
+        ps.setInt(8, 0);
     }
 
     @Override
     protected void setUpdateParameters(PreparedStatement ps, ATMConfig entity) throws SQLException {
         ps.setString(1, entity.getLocation());
         ps.setString(2, entity.getBranchName());
-        ps.setInt(3, entity.getId());
+        ps.setString(3, String.valueOf(entity.getId()));
     }
 
     @Override
     protected String getInsertSQL() {
-        return "INSERT INTO atm_info (id, location, branch_name) VALUES (?, ?, ?)";
+        return "INSERT INTO atm_machines (atm_id, location, branch_name, total_cash, denomination_500k, denomination_200k, denomination_100k, denomination_50k) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     }
 
     @Override
     protected String getUpdateSQL() {
-        return "UPDATE atm_info SET location = ?, branch_name = ? WHERE id = ?";
+        return "UPDATE atm_machines SET location = ?, branch_name = ? WHERE atm_id = ?";
     }
 }

@@ -14,16 +14,11 @@ import java.time.LocalDateTime;
 
 /**
  * H2 (JDBC) implementation of {@link AdminLogRepository}.
- *
- * <p>Mirrors the append-only {@code admin_log.txt} (timestamp|adminUser|action)
- * mapped onto the {@code admin_log} table.  The {@code log_time} column is a
- * {@code DATETIME} and is converted to/from the application's
- * {@code "yyyy-MM-dd HH:mm:ss"} string convention.
  */
 public class JdbcAdminLogRepository extends AbstractJdbcRepository<AdminLog, Long> implements AdminLogRepository {
 
     private static final String INSERT =
-            "INSERT INTO admin_log (log_time, admin_user, action) VALUES (?, ?, ?)";
+            "INSERT INTO admin_audit_log (log_id, created_at, admin_username, action, details) VALUES (?, ?, ?, ?, ?)";
 
     public JdbcAdminLogRepository(ConnectionManager connectionManager) {
         super(connectionManager);
@@ -33,9 +28,11 @@ public class JdbcAdminLogRepository extends AbstractJdbcRepository<AdminLog, Lon
     public void log(String timestamp, String adminUser, String action) {
         try (Connection conn = connectionManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(INSERT)) {
-            ps.setTimestamp(1, toTimestamp(timestamp));
-            ps.setString(2, adminUser);
-            ps.setString(3, action);
+            ps.setString(1, timestamp);
+            ps.setTimestamp(2, toTimestamp(timestamp));
+            ps.setString(3, adminUser);
+            ps.setString(4, action);
+            ps.setString(5, timestamp);
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Error writing admin log", e);
@@ -48,28 +45,30 @@ public class JdbcAdminLogRepository extends AbstractJdbcRepository<AdminLog, Lon
 
     @Override
     protected String getTableName() {
-        return "admin_log";
+        return "admin_audit_log";
     }
 
     @Override
     protected String getIdColumnName() {
-        return "id";
+        return "log_id";
     }
 
     @Override
     protected AdminLog mapRow(ResultSet rs) throws SQLException {
         return new AdminLog(
-                rs.getLong("id"),
-                rs.getTimestamp("log_time").toLocalDateTime().format(DateUtil.DT_FMT),
-                rs.getString("admin_user"),
+                Long.valueOf(rs.getString("log_id")),
+                rs.getTimestamp("created_at").toLocalDateTime().format(DateUtil.DT_FMT),
+                rs.getString("admin_username"),
                 rs.getString("action"));
     }
 
     @Override
     protected void setInsertParameters(PreparedStatement ps, AdminLog entity) throws SQLException {
-        ps.setTimestamp(1, toTimestamp(entity.getLogTime()));
-        ps.setString(2, entity.getAdminUser());
-        ps.setString(3, entity.getAction());
+        ps.setString(1, String.valueOf(entity.getId()));
+        ps.setTimestamp(2, toTimestamp(entity.getLogTime()));
+        ps.setString(3, entity.getAdminUser());
+        ps.setString(4, entity.getAction());
+        ps.setString(5, entity.getLogTime());
     }
 
     @Override
@@ -77,7 +76,8 @@ public class JdbcAdminLogRepository extends AbstractJdbcRepository<AdminLog, Lon
         ps.setTimestamp(1, toTimestamp(entity.getLogTime()));
         ps.setString(2, entity.getAdminUser());
         ps.setString(3, entity.getAction());
-        ps.setLong(4, entity.getId());
+        ps.setString(4, entity.getLogTime());
+        ps.setString(5, String.valueOf(entity.getId()));
     }
 
     @Override
@@ -87,7 +87,7 @@ public class JdbcAdminLogRepository extends AbstractJdbcRepository<AdminLog, Lon
 
     @Override
     protected String getUpdateSQL() {
-        return "UPDATE admin_log SET log_time = ?, admin_user = ?, action = ? WHERE id = ?";
+        return "UPDATE admin_audit_log SET created_at = ?, admin_username = ?, action = ?, details = ? WHERE log_id = ?";
     }
 }
 

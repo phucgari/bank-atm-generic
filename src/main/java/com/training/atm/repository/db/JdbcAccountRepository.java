@@ -9,6 +9,7 @@ import com.training.atm.model.strategy.CompoundInterestStrategy;
 import com.training.atm.model.strategy.ZeroOnNegativeInterestStrategy;
 import com.training.atm.repository.AccountRepository;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -21,20 +22,15 @@ import java.util.Optional;
 
 /**
  * H2 (JDBC) implementation of {@link AccountRepository}.
- *
- * <p>Mirrors {@code accounts.txt} (accountNumber|type|balance|lastInterestYearMonth)
- * mapped onto the {@code accounts} table.  Strategy pattern preserved: account
- * objects are rebuilt with the same interest algorithm the file repository
- * injects, so behaviour is identical regardless of persistence backend.
  */
 public class JdbcAccountRepository extends AbstractJdbcRepository<Account,String> implements AccountRepository {
 
     private static final String SELECT_ALL =
-            "SELECT account_number, account_type, balance, last_interest_year_month"
+            "SELECT account_id, account_number, account_type, balance, interest_rate, min_balance, overdraft_limit"
                     + " FROM accounts";
 
     private static final String UPDATE =
-            "UPDATE accounts SET balance = ?, last_interest_year_month = ?"
+            "UPDATE accounts SET balance = ?, interest_rate = ?, account_type = ?, min_balance = ?, overdraft_limit = ?"
                     + " WHERE account_number = ?";
 
     public JdbcAccountRepository(ConnectionManager connectionManager) {
@@ -86,9 +82,12 @@ public class JdbcAccountRepository extends AbstractJdbcRepository<Account,String
     public Account update(Account account) {
         try (Connection conn = connectionManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(UPDATE)) {
-            ps.setLong(1, account.getAccountBalance());
-            ps.setString(2, account.getLastInterestYearMonth());
-            ps.setString(3, account.getAccountNumber());
+            ps.setBigDecimal(1, BigDecimal.valueOf(account.getAccountBalance()));
+            ps.setBigDecimal(2, BigDecimal.ZERO);
+            ps.setString(3, account.getAccountType().name());
+            ps.setBigDecimal(4, BigDecimal.ZERO);
+            ps.setBigDecimal(5, BigDecimal.ZERO);
+            ps.setString(6, account.getAccountNumber());
             ps.executeUpdate();
             return account;
         } catch (SQLException e) {
@@ -101,9 +100,12 @@ public class JdbcAccountRepository extends AbstractJdbcRepository<Account,String
         try (Connection conn = connectionManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(UPDATE)) {
             for (Account account : updated) {
-                ps.setLong(1, account.getAccountBalance());
-                ps.setString(2, account.getLastInterestYearMonth());
-                ps.setString(3, account.getAccountNumber());
+                ps.setBigDecimal(1, BigDecimal.valueOf(account.getAccountBalance()));
+                ps.setBigDecimal(2, BigDecimal.ZERO);
+                ps.setString(3, account.getAccountType().name());
+                ps.setBigDecimal(4, BigDecimal.ZERO);
+                ps.setBigDecimal(5, BigDecimal.ZERO);
+                ps.setString(6, account.getAccountNumber());
                 ps.addBatch();
             }
             ps.executeBatch();
@@ -114,10 +116,9 @@ public class JdbcAccountRepository extends AbstractJdbcRepository<Account,String
 
     protected Account mapRow(ResultSet rs) throws SQLException {
         String accountNumber = rs.getString("account_number");
-        long balance = rs.getLong("balance");
-        String lastInterestYearMonth = rs.getString("last_interest_year_month");
+        long balance = rs.getBigDecimal("balance").longValueExact();
+        String lastInterestYearMonth = "";
         AccountType type = AccountType.valueOf(rs.getString("account_type"));
-        // Strategy pattern: each account type gets its own algorithm injected.
         return switch (type) {
             case SAVINGS -> new SavingsAccount(accountNumber, balance, lastInterestYearMonth,
                     new CompoundInterestStrategy(SavingsAccount.MONTHLY_RATE));
@@ -129,26 +130,31 @@ public class JdbcAccountRepository extends AbstractJdbcRepository<Account,String
     @Override
     protected void setInsertParameters(PreparedStatement ps, Account entity) throws SQLException {
         ps.setString(1, entity.getAccountNumber());
-        ps.setString(2, entity.getAccountType().name());
-        ps.setLong(3, entity.getAccountBalance());
-        ps.setString(4, entity.getLastInterestYearMonth());
+        ps.setString(2, entity.getAccountNumber());
+        ps.setBigDecimal(3, BigDecimal.valueOf(entity.getAccountBalance()));
+        ps.setBigDecimal(4, BigDecimal.ZERO);
+        ps.setString(5, entity.getAccountType().name());
+        ps.setBigDecimal(6, BigDecimal.ZERO);
+        ps.setBigDecimal(7, BigDecimal.ZERO);
     }
 
     @Override
     protected void setUpdateParameters(PreparedStatement ps, Account entity) throws SQLException {
-        ps.setString(1, entity.getAccountType().name());
-        ps.setLong(2, entity.getAccountBalance());
-        ps.setString(3, entity.getLastInterestYearMonth());
-        ps.setString(4, entity.getAccountNumber());
+        ps.setBigDecimal(1, BigDecimal.valueOf(entity.getAccountBalance()));
+        ps.setBigDecimal(2, BigDecimal.ZERO);
+        ps.setString(3, entity.getAccountType().name());
+        ps.setBigDecimal(4, BigDecimal.ZERO);
+        ps.setBigDecimal(5, BigDecimal.ZERO);
+        ps.setString(6, entity.getAccountNumber());
     }
 
     @Override
     protected String getInsertSQL() {
-        return "INSERT INTO accounts (account_number, account_type, balance, last_interest_year_month) VALUES (?, ?, ?, ?)";
+        return "INSERT INTO accounts (account_id, account_number, balance, interest_rate, account_type, min_balance, overdraft_limit) VALUES (?, ?, ?, ?, ?, ?, ?)";
     }
 
     @Override
     protected String getUpdateSQL() {
-        return "UPDATE accounts SET account_type = ?, balance = ?, last_interest_year_month = ? WHERE account_number = ?";
+        return "UPDATE accounts SET balance = ?, interest_rate = ?, account_type = ?, min_balance = ?, overdraft_limit = ? WHERE account_number = ?";
     }
 }

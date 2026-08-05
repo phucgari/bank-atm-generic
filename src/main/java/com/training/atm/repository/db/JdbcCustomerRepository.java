@@ -9,24 +9,18 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 /**
  * H2 (JDBC) implementation of {@link CustomerRepository}.
- *
- * <p>Mirrors {@code customers.txt} (customerId|name|address|email|cardId|accountNumber)
- * mapped onto the {@code customers} table.  Drop-in replacement for
- * {@link com.training.atm.repository.file.FileCustomerRepository} — services and
- * sessions depend only on the {@link CustomerRepository} interface (DIP).
  */
 public class JdbcCustomerRepository extends AbstractJdbcRepository<BankCustomer, String> implements CustomerRepository {
 
     private static final String SELECT_ALL =
-            "SELECT customer_id, customer_name, address, email, card_id, account_number"
-                    + " FROM customers";
+            "SELECT c.customer_id, c.name, c.address, c.email, c.card_id, a.account_number"
+                    + " FROM customers c JOIN accounts a ON c.account_id = a.account_id";
 
     public JdbcCustomerRepository(ConnectionManager connectionManager) {
         super(connectionManager);
@@ -34,12 +28,12 @@ public class JdbcCustomerRepository extends AbstractJdbcRepository<BankCustomer,
 
     @Override
     public Optional<BankCustomer> findByCardId(String cardId) {
-        return querySingle(SELECT_ALL + " WHERE card_id = ?", cardId);
+        return querySingle(SELECT_ALL + " WHERE c.card_id = ?", cardId);
     }
 
     @Override
     public Optional<BankCustomer> findByAccountNumber(String accountNumber) {
-        return querySingle(SELECT_ALL + " WHERE account_number = ?", accountNumber);
+        return querySingle(SELECT_ALL + " WHERE a.account_number = ?", accountNumber);
     }
 
     @Override
@@ -76,7 +70,7 @@ public class JdbcCustomerRepository extends AbstractJdbcRepository<BankCustomer,
     protected BankCustomer mapRow(ResultSet rs) throws SQLException {
         return new BankCustomer(
                 rs.getString("customer_id"),
-                rs.getString("customer_name"),
+                rs.getString("name"),
                 rs.getString("address"),
                 rs.getString("email"),
                 rs.getString("card_id"),
@@ -115,11 +109,11 @@ public class JdbcCustomerRepository extends AbstractJdbcRepository<BankCustomer,
 
     @Override
     protected String getInsertSQL() {
-        return "INSERT INTO customers (customer_id, customer_name, address, email, card_id, account_number) VALUES (?, ?, ?, ?, ?, ?)";
+        return "INSERT INTO customers (customer_id, name, address, email, card_id, account_id) VALUES (?, ?, ?, ?, ?, ?)";
     }
 
     @Override
     protected String getUpdateSQL() {
-        return "UPDATE customers SET customer_name = ?, address = ?, email = ?, card_id = ?, account_number = ? WHERE customer_id = ?";
+        return "UPDATE customers SET name = ?, address = ?, email = ?, card_id = ?, account_id = ? WHERE customer_id = ?";
     }
 }
