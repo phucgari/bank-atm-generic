@@ -17,11 +17,11 @@
   </properties>
 
   <dependencies>
-    <!-- H2 Database in MySQL compatibility mode (MODE=MySQL in the JDBC URL) -->
+    <!-- MySQL JDBC driver (docker-compose mysql) -->
     <dependency>
-      <groupId>com.h2database</groupId>
-      <artifactId>h2</artifactId>
-      <version>2.4.240</version>
+      <groupId>com.mysql</groupId>
+      <artifactId>mysql-connector-j</artifactId>
+      <version>8.4.0</version>
     </dependency>
     <!-- Source: https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api -->
     <dependency>

@@ -7,12 +7,12 @@ import java.util.Vector;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-public class H2ConnectionPool extends DatabaseConfig implements ConnectionPool {
+public class JdbcConnectionPool extends DatabaseConfig implements ConnectionPool {
 
     private final BlockingQueue<Connection> pool;
     private final Vector<Connection> allConnections;
 
-    public H2ConnectionPool(DatabaseConfig databaseConfig) {
+    public JdbcConnectionPool(DatabaseConfig databaseConfig) {
         super(databaseConfig);
         this.pool = new ArrayBlockingQueue<>(poolSize);
         this.allConnections = new Vector<>();

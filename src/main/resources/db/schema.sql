@@ -1,4 +1,3 @@
--- H2 database schema in MySQL compatibility mode (MODE=MySQL).
 -- Defines the bank ATM domain model described in the current ERD.
 
 -- -------- accounts -----------------------------------------------------------
@@ -22,7 +21,7 @@ CREATE TABLE IF NOT EXISTS atm_cards (
     failed_attempts    INT NOT NULL DEFAULT 0,
     linked_account_id  VARCHAR(30) NOT NULL UNIQUE,
     CONSTRAINT chk_atm_cards_status CHECK (status IN ('ACTIVE', 'BLOCKED')),
-    CONSTRAINT fk_atm_cards_account FOREIGN KEY (linked_account_id) REFERENCES accounts (account_id) ON DELETE CASCADE
+    CONSTRAINT fk_atm_cards_account FOREIGN KEY (linked_account_id) REFERENCES accounts (account_id) ON DELETE CASCADE,
     INDEX linked_account_index (linked_account_id)
 );
 
@@ -47,12 +46,9 @@ CREATE TABLE IF NOT EXISTS transactions (
     balance_after  DECIMAL(15,2) NOT NULL,
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_transactions_type CHECK (type IN ('DEPOSIT', 'WITHDRAWAL', 'TRANSFER_IN', 'TRANSFER_OUT', 'INTEREST')),
-    CONSTRAINT fk_transactions_account FOREIGN KEY (account_id) REFERENCES accounts (account_id) ON DELETE CASCADE
+    CONSTRAINT fk_transactions_account FOREIGN KEY (account_id) REFERENCES accounts (account_id) ON DELETE CASCADE,
     INDEX created_time_by_account (account_id, created_at)
 );
-
-CREATE INDEX IF NOT EXISTS idx_transactions_account_created
-    ON transactions (account_id, created_at);
 
 -- -------- scheduled_transfers ----------------------------------------------
 CREATE TABLE IF NOT EXISTS scheduled_transfers (

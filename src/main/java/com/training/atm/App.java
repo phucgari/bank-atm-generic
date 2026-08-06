@@ -3,14 +3,12 @@ package com.training.atm;
 import com.training.atm.config.db.*;
 import com.training.atm.repository.*;
 import com.training.atm.repository.db.*;
-import com.training.atm.repository.file.*;
 import com.training.atm.service.*;
 import com.training.atm.service.impl.DepositServiceImpl;
 import com.training.atm.service.impl.InterestServiceImpl;
 import com.training.atm.service.impl.TransferServiceImpl;
 import com.training.atm.service.impl.WithdrawalServiceImpl;
 import com.training.atm.session.*;
-import org.h2.engine.Database;
 
 /**
  * Application entry point — the composition root.
@@ -25,7 +23,7 @@ public class App {
         DataDirectory.ensureExists();
 
         DatabaseConfig databaseConfig = new DatabaseConfig();
-        ConnectionPool connectionPool = new H2ConnectionPool(databaseConfig);
+        ConnectionPool connectionPool = new JdbcConnectionPool(databaseConfig);
         ConnectionManager pooledConnectionManager = new PooledConnectionManager(connectionPool);
         TransactionContext transactionContext = new TransactionContext();
         ConnectionManager connectionManager = new TxAwareConnectionManager(pooledConnectionManager, transactionContext);

@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 public class JdbcAdminLogRepository extends AbstractJdbcRepository<AdminLog, Long> implements AdminLogRepository {
 
     private static final String INSERT =
-            "INSERT INTO admin_audit_log (log_id, created_at, admin_username, action, details) VALUES (?, ?, ?, ?, ?)";
+            "INSERT INTO admin_audit_log (created_at, admin_username, action) VALUES (?, ?, ?)";
 
     public JdbcAdminLogRepository(ConnectionManager connectionManager) {
         super(connectionManager);
@@ -28,11 +28,9 @@ public class JdbcAdminLogRepository extends AbstractJdbcRepository<AdminLog, Lon
     public void log(String timestamp, String adminUser, String action) {
         try (Connection conn = connectionManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(INSERT)) {
-            ps.setString(1, timestamp);
-            ps.setTimestamp(2, toTimestamp(timestamp));
-            ps.setString(3, adminUser);
-            ps.setString(4, action);
-            ps.setString(5, timestamp);
+            ps.setTimestamp(1, toTimestamp(timestamp));
+            ps.setString(2, adminUser);
+            ps.setString(3, action);
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Error writing admin log", e);
@@ -64,11 +62,9 @@ public class JdbcAdminLogRepository extends AbstractJdbcRepository<AdminLog, Lon
 
     @Override
     protected void setInsertParameters(PreparedStatement ps, AdminLog entity) throws SQLException {
-        ps.setString(1, String.valueOf(entity.getId()));
-        ps.setTimestamp(2, toTimestamp(entity.getLogTime()));
-        ps.setString(3, entity.getAdminUser());
-        ps.setString(4, entity.getAction());
-        ps.setString(5, entity.getLogTime());
+        ps.setTimestamp(1, toTimestamp(entity.getLogTime()));
+        ps.setString(2, entity.getAdminUser());
+        ps.setString(3, entity.getAction());
     }
 
     @Override
@@ -76,7 +72,7 @@ public class JdbcAdminLogRepository extends AbstractJdbcRepository<AdminLog, Lon
         ps.setTimestamp(1, toTimestamp(entity.getLogTime()));
         ps.setString(2, entity.getAdminUser());
         ps.setString(3, entity.getAction());
-        ps.setString(4, entity.getLogTime());
+        ps.setObject(4, null);
         ps.setString(5, String.valueOf(entity.getId()));
     }
 

@@ -1,7 +1,6 @@
 package com.training.atm.config.db;
 
-import org.h2.tools.RunScript;
-
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -12,7 +11,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
- * Creates the H2 schema and seeds it on first run.
+ * Creates the schema and seeds it on first run using standard JDBC.
  *
  * <p>Idempotent: the schema uses {@code CREATE TABLE IF NOT EXISTS}, and the
  * seed script is only executed when the {@code accounts} table is empty.
@@ -34,17 +33,45 @@ public final class DatabaseInitializer {
                 runScript(conn, SEED_SCRIPT);
             }
         } catch (SQLException e) {
-            System.err.println("Error initializing H2 database: " + e.getMessage());
+            System.err.println("Error initializing database: " + e.getMessage());
         }
     }
 
+    /**
+     * Reads a SQL script from the classpath and executes statements line by line,
+     * handling statements split across multiple lines separated by semicolons.
+     */
     private void runScript(Connection conn, String resource) throws SQLException {
-        try (InputStream in = DatabaseInitializer.class.getResourceAsStream(resource)) {
+        try (InputStream in = DatabaseInitializer.class.getResourceAsStream(resource);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
+
             if (in == null) {
                 System.err.println("Missing database script on classpath: " + resource);
                 return;
             }
-            RunScript.execute(conn, new InputStreamReader(in, StandardCharsets.UTF_8));
+
+            StringBuilder sqlBuilder = new StringBuilder();
+            String line;
+
+            try (Statement statement = conn.createStatement()) {
+                while ((line = reader.readLine()) != null) {
+                    String trimmedLine = line.trim();
+
+                    // Skip SQL comments and empty lines
+                    if (trimmedLine.startsWith("--") || trimmedLine.isEmpty()) {
+                        continue;
+                    }
+
+                    sqlBuilder.append(line).append("\n");
+
+                    // If the line ends with a semicolon, execute the accumulated statement
+                    if (trimmedLine.endsWith(";")) {
+                        String sql = sqlBuilder.toString().trim();
+                        statement.execute(sql);
+                        sqlBuilder.setLength(0); // Reset for the next statement
+                    }
+                }
+            }
         } catch (IOException e) {
             System.err.println("Error reading database script " + resource + ": " + e.getMessage());
         }
@@ -57,6 +84,4 @@ public final class DatabaseInitializer {
             return rs.getLong(1) == 0;
         }
     }
-
-    private DatabaseInitializer() { /* utility class — no instances */ }
 }

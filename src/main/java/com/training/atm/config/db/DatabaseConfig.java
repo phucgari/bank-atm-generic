@@ -3,7 +3,7 @@ package com.training.atm.config.db;
 import com.training.atm.repository.DataDirectory;
 
 /**
- * H2 database configuration running in <b>MySQL compatibility mode</b>
+ * database configuration running
  * ({@code MODE=MySQL} in the JDBC URL).
  *
  * <p>The database file lives in the same {@code data/} directory as the

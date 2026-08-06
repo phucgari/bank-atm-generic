@@ -32,7 +32,7 @@ public class JdbcTransactionRepository extends AbstractJdbcRepository<Transactio
     private static final String SUM_BY_TYPE_AND_DATE =
             "SELECT COALESCE(SUM(amount), 0) FROM transactions"
                     + " WHERE account_id = ? AND type = ?"
-                    + " AND CAST(created_at AS VARCHAR(19)) LIKE ?";
+                    + " AND CAST(created_at AS CHAR(19)) LIKE ?";
 
     public JdbcTransactionRepository(ConnectionManager connectionManager) {
         super(connectionManager);

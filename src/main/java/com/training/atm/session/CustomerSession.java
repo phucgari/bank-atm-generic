@@ -304,10 +304,12 @@ public class CustomerSession {
             screen.println("ERROR: Current PIN is incorrect."); return;
         }
         for (int attempt = 0; attempt < PIN_ATTEMPT_LIMIT; attempt++) {
-            String newPin = screen.readPin("Enter new PIN: ");
+            screen.print("Enter new PIN: ");
+            String newPin = screen.acceptInput();
             if (!ValidationUtil.isValidPin(newPin))   { screen.println("ERROR: PIN must be 4 numeric digits."); continue; }
             if (ValidationUtil.isWeakPin(newPin))      { screen.println("ERROR: PIN is too simple."); continue; }
             if (newPin.equals(card.getPin()))           { screen.println("ERROR: New PIN must differ from current."); continue; }
+            newPin = SecurityUtil.hashPin(newPin);
             if (!newPin.equals(screen.readPin("Confirm new PIN: "))) {
                 screen.println("ERROR: PINs do not match."); continue;
             }
