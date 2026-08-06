@@ -16,22 +16,15 @@ import com.training.atm.repository.DataDirectory;
  * </ul>
  */
 public class DatabaseConfig {
-    private static final String DEFAULT_USER = "sa";
-    private static final String DEFAULT_PASSWORD = "";
+    private static final String DEFAULT_USER = "appuser";
+    private static final String DEFAULT_PASSWORD = "apppass";
     private static final int DEFAULT_POOL_SIZE = 3;
     /**
      * Relative path to the database file inside {@code data/}. The explicit
      * {@code ./} prefix is required by H2 2.x for paths relative to the CWD.
      */
-    private static final String DB_PATH = "./" + DataDirectory.getPath("atm").replace('\\', '/');
 
-    private static final String DEFAULT_URL =
-            "jdbc:h2:file:" + DB_PATH
-                    + ";MODE=MySQL"
-                    + ";DATABASE_TO_LOWER=TRUE"
-                    + ";CASE_INSENSITIVE_IDENTIFIERS=TRUE"
-                    + ";DB_CLOSE_DELAY=-1"
-                    + ";NON_KEYWORDS=action,type,status";
+    private static final String DEFAULT_URL ="jdbc:mysql://localhost:3306/appdb";
 
     protected String user;
     protected String password;
