@@ -22,9 +22,9 @@ INSERT INTO accounts (account_number, account_type, balance, last_interest_year_
 -- -------- cards --------------------------------------------------------------
 -- cards.txt: cardId|pin|accountNumber|status|failedAttempts
 INSERT INTO cards (card_id, pin, account_number, status, failed_attempts) VALUES
-('4921-XXXX-XXXX-1001', '2468', 'ACC001', 'ACTIVE',  0),
-('4921-XXXX-XXXX-1002', '3579', 'ACC002', 'ACTIVE',  0),
-('4921-XXXX-XXXX-1003', '1357', 'ACC003', 'ACTIVE',  0);
+('4921-XXXX-XXXX-1001', SHA2('2468', 256), 'ACC001', 'ACTIVE',  0),
+('4921-XXXX-XXXX-1002', SHA2('3579', 256), 'ACC002', 'ACTIVE',  0),
+('4921-XXXX-XXXX-1003', SHA2('1357', 256), 'ACC003', 'ACTIVE',  0);
 
 -- -------- transactions -------------------------------------------------------
 -- transactions.txt: transactionId|accountNumber|dateTime|type|amount|balanceAfter|description

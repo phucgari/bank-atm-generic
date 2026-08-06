@@ -17,6 +17,8 @@ public interface GenericRepository<T extends Identifiable<ID>, ID> {
 
     boolean deleteById(ID id);
 
+    List<T> findAll(Predicate<T> predicate);
+
     long count();
 
     boolean existsById(ID id);

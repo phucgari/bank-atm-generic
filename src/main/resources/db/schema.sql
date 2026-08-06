@@ -17,12 +17,13 @@ CREATE TABLE IF NOT EXISTS accounts (
 -- -------- atm_cards ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS atm_cards (
     card_id            VARCHAR(30) PRIMARY KEY,
-    pin_hash           VARCHAR(64) NOT NULL,
+    pin_hash           CHAR(64) NOT NULL,
     status             VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     failed_attempts    INT NOT NULL DEFAULT 0,
     linked_account_id  VARCHAR(30) NOT NULL UNIQUE,
     CONSTRAINT chk_atm_cards_status CHECK (status IN ('ACTIVE', 'BLOCKED')),
-    CONSTRAINT fk_atm_cards_account FOREIGN KEY (linked_account_id) REFERENCES accounts (account_id)
+    CONSTRAINT fk_atm_cards_account FOREIGN KEY (linked_account_id) REFERENCES accounts (account_id) ON DELETE CASCADE
+    INDEX linked_account_index (linked_account_id)
 );
 
 -- -------- customers ---------------------------------------------------------
@@ -33,8 +34,8 @@ CREATE TABLE IF NOT EXISTS customers (
     email       VARCHAR(100) NOT NULL UNIQUE,
     card_id     VARCHAR(30) UNIQUE,
     account_id  VARCHAR(30) UNIQUE,
-    CONSTRAINT fk_customers_card FOREIGN KEY (card_id) REFERENCES atm_cards (card_id),
-    CONSTRAINT fk_customers_account FOREIGN KEY (account_id) REFERENCES accounts (account_id)
+    CONSTRAINT fk_customers_card FOREIGN KEY (card_id) REFERENCES atm_cards (card_id) ON DELETE CASCADE,
+    CONSTRAINT fk_customers_account FOREIGN KEY (account_id) REFERENCES accounts (account_id) ON DELETE CASCADE
 );
 
 -- -------- transactions ------------------------------------------------------
@@ -46,7 +47,8 @@ CREATE TABLE IF NOT EXISTS transactions (
     balance_after  DECIMAL(15,2) NOT NULL,
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_transactions_type CHECK (type IN ('DEPOSIT', 'WITHDRAWAL', 'TRANSFER_IN', 'TRANSFER_OUT', 'INTEREST')),
-    CONSTRAINT fk_transactions_account FOREIGN KEY (account_id) REFERENCES accounts (account_id)
+    CONSTRAINT fk_transactions_account FOREIGN KEY (account_id) REFERENCES accounts (account_id) ON DELETE CASCADE
+    INDEX created_time_by_account (account_id, created_at)
 );
 
 CREATE INDEX IF NOT EXISTS idx_transactions_account_created

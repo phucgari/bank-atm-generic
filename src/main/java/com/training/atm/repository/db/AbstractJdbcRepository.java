@@ -11,6 +11,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 public abstract class AbstractJdbcRepository<T extends Identifiable<ID>, ID>
         implements GenericRepository<T, ID> {
@@ -79,6 +80,11 @@ public abstract class AbstractJdbcRepository<T extends Identifiable<ID>, ID>
         }
 
         return results;
+    }
+
+    @Override
+    public List<T> findAll(Predicate<T> predicate) {
+        return findAll().stream().filter(predicate).toList();
     }
 
     @Override

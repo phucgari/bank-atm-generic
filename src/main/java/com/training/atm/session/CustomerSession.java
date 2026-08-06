@@ -91,10 +91,6 @@ public class CustomerSession {
         boolean authenticated = false;
         for (int attempt = 0; attempt < PIN_ATTEMPT_LIMIT; attempt++) {
             String pin = screen.readPin("Enter PIN: ");
-            if (!ValidationUtil.isValidPin(pin)) {
-                screen.println("PIN must be exactly 4 numeric digits.");
-                continue;
-            }
             if (cardScanner.validatePin(card, pin)) { authenticated = true; break; }
             if (card.isBlocked()) return;   // State pattern: delegates to CardState
         }

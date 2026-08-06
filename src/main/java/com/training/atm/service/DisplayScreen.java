@@ -1,5 +1,8 @@
 package com.training.atm.service;
 
+import com.training.atm.util.SecurityUtil;
+import com.training.atm.util.ValidationUtil;
+
 import java.io.Console;
 import java.util.Scanner;
 
@@ -39,7 +42,13 @@ public class DisplayScreen {
             return (pin != null) ? new String(pin) : "";
         }
         System.out.print(prompt);
-        return scanner.nextLine().trim();
+
+        String pin = scanner.nextLine().trim();
+        if (!ValidationUtil.isValidPin(pin)) {
+            println("PIN must be exactly 4 numeric digits.");
+            return "";
+        }
+        return SecurityUtil.hashPin(pin);
     }
 
     public void printSeparator()       { System.out.println(SEPARATOR); }
