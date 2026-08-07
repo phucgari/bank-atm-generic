@@ -5,6 +5,7 @@ import com.training.atm.model.state.ActiveCardState;
 import com.training.atm.model.state.BlockedCardState;
 import com.training.atm.testutil.RecordingDisplayScreen;
 import com.training.atm.testutil.TestRepositories.InMemoryCardRepository;
+import com.training.atm.util.SecurityUtil;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -82,11 +83,11 @@ public class CardScannerTest {
 
     @Test
     public void validatePinReturnsTrueAndResetsAttemptsWhenCorrect() {
-        ATMCard card = new ATMCard("1234567890123456", "hashed_pin", "ACC001", new ActiveCardState(), 2);
+        ATMCard card = new ATMCard("1234567890123456", SecurityUtil.hashPin("1234"), "ACC001", new ActiveCardState(), 2);
         cardRepo = new InMemoryCardRepository(card);
         scanner = new CardScanner(cardRepo, screen);
 
-        boolean result = scanner.validatePin(card, "hashed_pin");
+        boolean result = scanner.validatePin(card, "1234");
 
         assertTrue(result);
         assertEquals(0, card.getFailedAttempts());
@@ -94,7 +95,7 @@ public class CardScannerTest {
 
     @Test
     public void validatePinReturnsFalseAndIncrementsAttemptsWhenIncorrect() {
-        ATMCard card = new ATMCard("1234567890123456", "correct_pin", "ACC001", new ActiveCardState(), 0);
+        ATMCard card = new ATMCard("1234567890123456", SecurityUtil.hashPin("1234"), "ACC001", new ActiveCardState(), 0);
         cardRepo = new InMemoryCardRepository(card);
         scanner = new CardScanner(cardRepo, screen);
 
@@ -108,7 +109,7 @@ public class CardScannerTest {
 
     @Test
     public void validatePinBlocksCardAfterMaxAttempts() {
-        ATMCard card = new ATMCard("1234567890123456", "correct_pin", "ACC001", new ActiveCardState(), 2);
+        ATMCard card = new ATMCard("1234567890123456", SecurityUtil.hashPin("1234"), "ACC001", new ActiveCardState(), 2);
         cardRepo = new InMemoryCardRepository(card);
         scanner = new CardScanner(cardRepo, screen);
 
@@ -122,7 +123,7 @@ public class CardScannerTest {
 
     @Test
     public void validatePinShowsRemainingAttemptsCorrectly() {
-        ATMCard card = new ATMCard("1234567890123456", "correct_pin", "ACC001", new ActiveCardState(), 1);
+        ATMCard card = new ATMCard("1234567890123456", SecurityUtil.hashPin("1234"), "ACC001", new ActiveCardState(), 1);
         cardRepo = new InMemoryCardRepository(card);
         scanner = new CardScanner(cardRepo, screen);
 

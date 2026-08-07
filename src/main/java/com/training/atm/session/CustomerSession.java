@@ -300,7 +300,7 @@ public class CustomerSession {
         screen.println();
         screen.println("=== CHANGE PIN ===");
         String currentPin = screen.readPin("Enter current PIN: ");
-        if (!card.getPin().equals(currentPin)) {
+        if (!SecurityUtil.matchesPin(currentPin, card.getPin())) {
             screen.println("ERROR: Current PIN is incorrect."); return;
         }
         for (int attempt = 0; attempt < PIN_ATTEMPT_LIMIT; attempt++) {
@@ -308,12 +308,14 @@ public class CustomerSession {
             String newPin = screen.acceptInput();
             if (!ValidationUtil.isValidPin(newPin))   { screen.println("ERROR: PIN must be 4 numeric digits."); continue; }
             if (ValidationUtil.isWeakPin(newPin))      { screen.println("ERROR: PIN is too simple."); continue; }
-            if (newPin.equals(card.getPin()))           { screen.println("ERROR: New PIN must differ from current."); continue; }
-            newPin = SecurityUtil.hashPin(newPin);
-            if (!newPin.equals(screen.readPin("Confirm new PIN: "))) {
+            if (SecurityUtil.matchesPin(newPin, card.getPin())) {
+                screen.println("ERROR: New PIN must differ from current."); continue;
+            }
+            String confirmation = screen.readPin("Confirm new PIN: ");
+            if (!newPin.equals(confirmation)) {
                 screen.println("ERROR: PINs do not match."); continue;
             }
-            card.setPin(newPin);
+            card.setPin(SecurityUtil.hashPin(newPin));
             cardRepo.update(card);
             screen.println("PIN changed successfully!");
             return;

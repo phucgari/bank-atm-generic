@@ -2,6 +2,7 @@ package com.training.atm.service;
 
 import com.training.atm.model.ATMCard;
 import com.training.atm.repository.CardRepository;
+import com.training.atm.util.SecurityUtil;
 
 import java.util.Optional;
 
@@ -69,7 +70,7 @@ public class CardScanner {
      * @return {@code true} if the PIN matches
      */
     public boolean validatePin(ATMCard card, String enteredPin) {
-        if (card.getPin().equals(enteredPin)) {
+        if (SecurityUtil.matchesPin(enteredPin, card.getPin())) {
             card.recordPinSuccess();    // State pattern: resets counter, stays ACTIVE
             cardRepo.update(card);
             return true;

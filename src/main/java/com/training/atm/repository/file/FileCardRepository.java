@@ -3,6 +3,7 @@ package com.training.atm.repository.file;
 import com.training.atm.model.ATMCard;
 import com.training.atm.model.enums.CardStatus;
 import com.training.atm.repository.CardRepository;
+import com.training.atm.util.SecurityUtil;
 
 import java.io.*;
 import java.util.*;
@@ -34,7 +35,7 @@ public class FileCardRepository implements CardRepository {
                 if (p.length < 5) continue;
                 CardStatus status = CardStatus.valueOf(p[3]);
                 ATMCard card = new ATMCard(
-                        p[0], p[1], p[2],
+                        p[0], SecurityUtil.normalizeStoredPin(p[1]), p[2],
                         ATMCard.stateFrom(status),   // State pattern: reconstruct state object
                         Integer.parseInt(p[4]));
                 cards.put(card.getCardId(), card);
@@ -47,7 +48,8 @@ public class FileCardRepository implements CardRepository {
     private void saveAll() {
         try (PrintWriter pw = new PrintWriter(new FileWriter(FILE))) {
             for (ATMCard c : cards.values()) {
-                pw.println(c.getCardId() + "|" + c.getPin() + "|" + c.getAccountNumber()
+                String pinHash = SecurityUtil.normalizeStoredPin(c.getPin());
+                pw.println(c.getCardId() + "|" + pinHash + "|" + c.getAccountNumber()
                         + "|" + c.getStatus() + "|" + c.getFailedAttempts());
             }
         } catch (IOException e) {
