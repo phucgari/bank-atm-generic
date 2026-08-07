@@ -21,7 +21,7 @@ public class DepositCommand implements TransactionCommand<DepositResult> {
     }
 
     @Override
-    public DepositResult execute() {
+    public DepositResult call() {
         return service.deposit(account, amount);
     }
 

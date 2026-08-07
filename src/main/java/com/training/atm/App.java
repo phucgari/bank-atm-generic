@@ -48,7 +48,7 @@ public class App {
         // --- Business services ---
         WithdrawalService withdrawalService = new WithdrawalServiceImpl(accountRepo, txRepo, cashDispenser);
         DepositService    depositService    = new DepositServiceImpl(accountRepo, txRepo, cashDispenser);
-        TransferService   transferService   = new TransferServiceImpl(accountRepo, txRepo, schedRepo, customerRepo);
+        TransferService   transferService   = new TransferServiceImpl(accountRepo, txRepo, schedRepo, customerRepo, transactionManager);
         InterestService   interestService   = new InterestServiceImpl(accountRepo, txRepo);
 
         // Process any pending scheduled transfers at startup.
@@ -59,7 +59,7 @@ public class App {
         CustomerSession customerSession = new CustomerSession(new CustomerSessionDeps(
                 screen, cardScanner, cashDispenser, receiptPrinter,
                 withdrawalService, depositService, transferService,
-                accountRepo, txRepo, customerRepo, cardRepo, schedRepo, atmConfig));
+                accountRepo, txRepo, customerRepo, cardRepo, schedRepo, atmConfig, transactionManager));
 
         AdminSession adminSession = new AdminSession(new AdminSessionDeps(
                 screen, interestService, atmConfig, (DenominationRepository) atmConfig,

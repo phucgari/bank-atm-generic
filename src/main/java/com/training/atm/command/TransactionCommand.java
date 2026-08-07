@@ -1,6 +1,6 @@
 package com.training.atm.command;
 
-import com.training.atm.dto.ServiceResult;
+import java.util.concurrent.Callable;
 
 /**
  * Command interface for ATM transaction operations.
@@ -16,12 +16,9 @@ import com.training.atm.dto.ServiceResult;
  *       interface in the future without changing callers.</li>
  * </ul>
  *
- * @param <R> the specific {@link OperationResult} type returned by this command
+ * @param <T> the specific {@link OperationResult} type returned by this command
  */
-public interface TransactionCommand<R extends OperationResult> {
-    /** Executes the operation and returns its result. */
-    R execute();
-
+public interface TransactionCommand<T extends OperationResult> extends Callable<T> {
     /** Short human-readable type label (e.g. {@code "WITHDRAWAL"}). Used on receipts. */
     String getType();
 

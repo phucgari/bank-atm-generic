@@ -1,6 +1,7 @@
 package com.training.atm.service.impl;
 
 import com.training.atm.command.TransferCommand;
+import com.training.atm.config.db.TransactionManager;
 import com.training.atm.dto.TransferResult;
 import com.training.atm.model.*;
 import com.training.atm.model.enums.TransactionType;
@@ -8,7 +9,6 @@ import com.training.atm.model.enums.TransferFrequency;
 import com.training.atm.repository.*;
 import com.training.atm.service.TransferService;
 import com.training.atm.util.DateUtil;
-import com.training.atm.util.FormatUtil;
 import com.training.atm.validation.TransactionValidator;
 import com.training.atm.validation.transfer.*;
 
@@ -46,6 +46,7 @@ public class TransferServiceImpl implements TransferService {
     private final TransactionRepository       txRepo;
     private final ScheduledTransferRepository schedRepo;
     private final CustomerRepository          customerRepo;
+    private final TransactionManager          transactionManager;
 
     /** CoR chain assembled once — validators are stateless, so sharing is safe. */
     private final TransactionValidator<TransferContext> validationChain =
@@ -57,13 +58,14 @@ public class TransferServiceImpl implements TransferService {
             .then(new BalanceTransferValidator());
 
     public TransferServiceImpl(AccountRepository accountRepo,
-                                TransactionRepository txRepo,
-                                ScheduledTransferRepository schedRepo,
-                                CustomerRepository customerRepo) {
+                               TransactionRepository txRepo,
+                               ScheduledTransferRepository schedRepo,
+                               CustomerRepository customerRepo, TransactionManager transactionManager) {
         this.accountRepo  = accountRepo;
         this.txRepo       = txRepo;
         this.schedRepo    = schedRepo;
         this.customerRepo = customerRepo;
+        this.transactionManager = transactionManager;
     }
 
     // -----------------------------------------------------------------------
@@ -141,7 +143,7 @@ public class TransferServiceImpl implements TransferService {
             // Command pattern: wrap execution in a self-describing command.
             TransferCommand cmd = new TransferCommand(
                     srcOpt.get(), st.getDestAccount(), st.getAmount(), this);
-            TransferResult result = cmd.execute();
+            TransferResult result = transactionManager.executeInTransaction(cmd);
 
             if (!result.isSuccess()) {
                 st.executeFail();   // State pattern

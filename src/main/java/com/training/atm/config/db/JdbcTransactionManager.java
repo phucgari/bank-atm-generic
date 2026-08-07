@@ -2,6 +2,7 @@ package com.training.atm.config.db;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.concurrent.Callable;
 
 public class JdbcTransactionManager implements TransactionManager {
 
@@ -14,7 +15,7 @@ public class JdbcTransactionManager implements TransactionManager {
     }
 
     @Override
-    public <T> T executeInTransaction(TransactionalOperation<T> cb) {
+    public <T> T executeInTransaction(Callable<T> cb) {
         if (txContext.isActive()) {
             throw new IllegalStateException("Nested transactions not supported.");
         }
@@ -25,7 +26,7 @@ public class JdbcTransactionManager implements TransactionManager {
 
             txContext.bind(con);
             try {
-                T result = cb.execute(con);
+                T result = cb.call();
                 con.commit();
                 return result;
             } catch (Exception e) {

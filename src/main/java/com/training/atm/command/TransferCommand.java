@@ -30,7 +30,7 @@ public class TransferCommand implements TransactionCommand<TransferResult> {
     }
 
     @Override
-    public TransferResult execute() {
+    public TransferResult call() {
         return service.transfer(source, destAccountNumber, amount);
     }
 

@@ -21,7 +21,7 @@ public class WithdrawCommand implements TransactionCommand<WithdrawalResult> {
     }
 
     @Override
-    public WithdrawalResult execute() {
+    public WithdrawalResult call() {
         return service.withdraw(account, amount);
     }
 

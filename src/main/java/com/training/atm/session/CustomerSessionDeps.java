@@ -1,5 +1,6 @@
 package com.training.atm.session;
 
+import com.training.atm.config.db.TransactionManager;
 import com.training.atm.repository.*;
 import com.training.atm.service.*;
 
@@ -28,5 +29,6 @@ public record CustomerSessionDeps(
         CustomerRepository          customerRepo,
         CardRepository              cardRepo,
         ScheduledTransferRepository schedRepo,
-        ATMInfoRepository           atmInfo
+        ATMInfoRepository           atmInfo,
+        TransactionManager          transactionManager
 ) {}
