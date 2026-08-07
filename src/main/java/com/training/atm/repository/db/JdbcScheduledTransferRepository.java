@@ -26,27 +26,27 @@ public class JdbcScheduledTransferRepository extends AbstractJdbcRepository<Sche
 
     private static final String INSERT =
             "INSERT INTO scheduled_transfers (transfer_id, source_account_id, dest_account_id, amount,"
-                    + " frequency, next_execution, status, max_repeats, executed_count)"
-                    + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    + " frequency, next_execution, status, max_repeats, executed_count, end_date)"
+                    + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     private static final String UPDATE =
             "UPDATE scheduled_transfers SET source_account_id = ?, dest_account_id = ?, amount = ?,"
                     + " frequency = ?, next_execution = ?, status = ?, max_repeats = ?,"
-                    + " executed_count = ? WHERE transfer_id = ?";
+                    + " executed_count = ?, end_date = ? WHERE transfer_id = ?";
 
     private static final String SELECT_BY_ID =
             "SELECT transfer_id, source_account_id, dest_account_id, amount, frequency, next_execution,"
-                    + " status, max_repeats, executed_count FROM scheduled_transfers"
+                    + " status, max_repeats, executed_count, end_date FROM scheduled_transfers"
                     + " WHERE transfer_id = ?";
 
     private static final String SELECT_BY_SOURCE =
             "SELECT transfer_id, source_account_id, dest_account_id, amount, frequency, next_execution,"
-                    + " status, max_repeats, executed_count FROM scheduled_transfers"
+                    + " status, max_repeats, executed_count, end_date FROM scheduled_transfers"
                     + " WHERE source_account_id = ? ORDER BY next_execution";
 
     private static final String SELECT_ACTIVE =
             "SELECT transfer_id, source_account_id, dest_account_id, amount, frequency, next_execution,"
-                    + " status, max_repeats, executed_count FROM scheduled_transfers"
+                    + " status, max_repeats, executed_count, end_date FROM scheduled_transfers"
                     + " WHERE status = 'ACTIVE' ORDER BY next_execution";
 
     private static final String COUNT_ACTIVE_BY_SOURCE =
@@ -75,7 +75,7 @@ public class JdbcScheduledTransferRepository extends AbstractJdbcRepository<Sche
         try (Connection conn = connectionManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(UPDATE)) {
             setCommonParameters(ps, st, 1);
-            ps.setString(9, st.getId());
+            ps.setString(10, st.getId());
             ps.executeUpdate();
             return st;
         } catch (SQLException e) {
@@ -122,6 +122,13 @@ public class JdbcScheduledTransferRepository extends AbstractJdbcRepository<Sche
         ps.setString(start + 5, st.getStatus().name());
         ps.setInt(start + 6, st.getMaxRepeat());
         ps.setInt(start + 7, st.getRepeatCount());
+        String endDate = st.getEndDate();
+        if (endDate == null || endDate.isBlank()) {
+            ps.setNull(start + 8, java.sql.Types.DATE);
+        } else {
+            ps.setDate(start + 8,
+                    java.sql.Date.valueOf(LocalDate.parse(endDate, DateUtil.DATE_FMT)));
+        }
     }
 
     private Optional<ScheduledTransfer> querySingle(String sql, String value) {
@@ -181,9 +188,11 @@ public class JdbcScheduledTransferRepository extends AbstractJdbcRepository<Sche
                 TransferFrequency.valueOf(rs.getString("frequency")),
                 rs.getTimestamp("next_execution").toLocalDateTime().toLocalDate().format(DateUtil.DATE_FMT),
                 state,
-                0,
+                rs.getInt("max_repeats"),
                 rs.getInt("executed_count"),
-                "");
+                rs.getDate("end_date") == null
+                        ? ""
+                        : rs.getDate("end_date").toLocalDate().format(DateUtil.DATE_FMT));
     }
 
     @Override
@@ -205,7 +214,7 @@ public class JdbcScheduledTransferRepository extends AbstractJdbcRepository<Sche
     @Override
     protected void setUpdateParameters(PreparedStatement ps, ScheduledTransfer entity) throws SQLException {
         setCommonParameters(ps, entity, 1);
-        ps.setString(9, entity.getId());
+        ps.setString(10, entity.getId());
     }
 
     @Override
