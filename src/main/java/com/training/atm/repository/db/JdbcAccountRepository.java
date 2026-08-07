@@ -82,12 +82,7 @@ public class JdbcAccountRepository extends AbstractJdbcRepository<Account,String
     public Account update(Account account) {
         try (Connection conn = connectionManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(UPDATE)) {
-            ps.setBigDecimal(1, BigDecimal.valueOf(account.getAccountBalance()));
-            ps.setBigDecimal(2, BigDecimal.ZERO);
-            ps.setString(3, account.getAccountType().name());
-            ps.setBigDecimal(4, BigDecimal.ZERO);
-            ps.setBigDecimal(5, BigDecimal.ZERO);
-            ps.setString(6, account.getAccountNumber());
+            setUpdateParameters(ps, account);
             ps.executeUpdate();
             return account;
         } catch (SQLException e) {
@@ -100,12 +95,7 @@ public class JdbcAccountRepository extends AbstractJdbcRepository<Account,String
         try (Connection conn = connectionManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(UPDATE)) {
             for (Account account : updated) {
-                ps.setBigDecimal(1, BigDecimal.valueOf(account.getAccountBalance()));
-                ps.setBigDecimal(2, BigDecimal.ZERO);
-                ps.setString(3, account.getAccountType().name());
-                ps.setBigDecimal(4, BigDecimal.ZERO);
-                ps.setBigDecimal(5, BigDecimal.ZERO);
-                ps.setString(6, account.getAccountNumber());
+                setUpdateParameters(ps, account);
                 ps.addBatch();
             }
             ps.executeBatch();
@@ -141,10 +131,15 @@ public class JdbcAccountRepository extends AbstractJdbcRepository<Account,String
     @Override
     protected void setUpdateParameters(PreparedStatement ps, Account entity) throws SQLException {
         ps.setBigDecimal(1, BigDecimal.valueOf(entity.getAccountBalance()));
-        ps.setBigDecimal(2, BigDecimal.ZERO);
+        ps.setBigDecimal(2, BigDecimal.valueOf(entity.getInterestRate()));
         ps.setString(3, entity.getAccountType().name());
-        ps.setBigDecimal(4, BigDecimal.ZERO);
-        ps.setBigDecimal(5, BigDecimal.ZERO);
+        if (entity instanceof SavingsAccount) {
+            ps.setBigDecimal(4, BigDecimal.valueOf(entity.getWithdrawalFloor()));
+            ps.setBigDecimal(5, BigDecimal.ZERO);
+        } else {
+            ps.setBigDecimal(4, BigDecimal.ZERO);
+            ps.setBigDecimal(5, BigDecimal.valueOf(-entity.getWithdrawalFloor()));
+        }
         ps.setString(6, entity.getAccountNumber());
     }
 
