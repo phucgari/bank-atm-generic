@@ -1,6 +1,7 @@
 package com.training.atm.validation.transfer;
 
 import com.training.atm.config.TransactionLimits;
+import com.training.atm.dto.ErrorCode;
 import com.training.atm.util.FormatUtil;
 import com.training.atm.validation.ValidationResult;
 import com.training.atm.validation.ValidationRule;
@@ -11,7 +12,7 @@ public class SingleTransferLimitValidator implements ValidationRule<TransferCont
     public ValidationResult validate(TransferContext ctx) {
         return ctx.amount() <= TransactionLimits.MAX_TRANSFER_SINGLE
                 ? ValidationResult.valid()
-                : ValidationResult.invalid("Single transfer limit is "
+                : ValidationResult.invalid(ErrorCode.LIMIT_EXCEEDED, "Single transfer limit is "
                         + FormatUtil.formatVND(TransactionLimits.MAX_TRANSFER_SINGLE) + ".");
     }
 }

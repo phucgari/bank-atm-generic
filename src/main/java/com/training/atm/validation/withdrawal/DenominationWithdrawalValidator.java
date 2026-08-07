@@ -1,6 +1,7 @@
 package com.training.atm.validation.withdrawal;
 
 import com.training.atm.config.TransactionLimits;
+import com.training.atm.dto.ErrorCode;
 import com.training.atm.util.FormatUtil;
 import com.training.atm.util.ValidationUtil;
 import com.training.atm.validation.ValidationResult;
@@ -12,7 +13,7 @@ public class DenominationWithdrawalValidator implements ValidationRule<Withdrawa
     public ValidationResult validate(WithdrawalContext ctx) {
         return ValidationUtil.isMultipleOf(ctx.amount(), TransactionLimits.WITHDRAWAL_DENOMINATION)
                 ? ValidationResult.valid()
-                : ValidationResult.invalid("Withdrawal amount must be a positive multiple of "
+                : ValidationResult.invalid(ErrorCode.INVALID_AMOUNT, "Withdrawal amount must be a positive multiple of "
                         + FormatUtil.formatVND(TransactionLimits.WITHDRAWAL_DENOMINATION) + ".");
     }
 }

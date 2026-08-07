@@ -10,17 +10,21 @@ public final class TransferResult extends ServiceResult<Transaction> implements 
     private final String destCustomerName;
 
     private TransferResult(boolean success, String message,
-                           Transaction transaction, String destCustomerName) {
-        super(success, transaction, message, ErrorCode.SUCCESS);
+                           Transaction transaction, String destCustomerName, ErrorCode errorCode) {
+        super(success, transaction, message, errorCode);
         this.destCustomerName = destCustomerName;
     }
 
     public static TransferResult success(Transaction tx, String destCustomerName) {
-        return new TransferResult(true, null, tx, destCustomerName);
+        return new TransferResult(true, null, tx, destCustomerName, null);
     }
 
     public static TransferResult failure(String message) {
-        return new TransferResult(false, message, null, null);
+        return failure(message, ErrorCode.INTERNAL_ERROR);
+    }
+
+    public static TransferResult failure(String message, ErrorCode errorCode) {
+        return new TransferResult(false, message, null, null, errorCode);
     }
 
     public Transaction getTransaction() {

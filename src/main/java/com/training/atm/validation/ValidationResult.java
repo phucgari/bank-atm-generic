@@ -1,20 +1,24 @@
 package com.training.atm.validation;
 
+import com.training.atm.dto.ErrorCode;
+
 public final class ValidationResult {
     private final boolean valid;
     private final String errorMessage;
+    private final ErrorCode errorCode;
 
-    private ValidationResult(boolean valid, String errorMessage) {
+    private ValidationResult(boolean valid, String errorMessage, ErrorCode errorCode) {
         this.valid = valid;
         this.errorMessage = errorMessage;
+        this.errorCode = errorCode;
     }
 
     public static ValidationResult valid() {
-        return new ValidationResult(true, null);
+        return new ValidationResult(true, null, null);
     }
 
-    public static ValidationResult invalid(String errorMessage) {
-        return new ValidationResult(false, errorMessage);
+    public static ValidationResult invalid(ErrorCode errorCode, String errorMessage) {
+        return new ValidationResult(false, errorMessage, errorCode);
     }
 
     public boolean isValid() {
@@ -23,5 +27,9 @@ public final class ValidationResult {
 
     public String getErrorMessage() {
         return errorMessage;
+    }
+
+    public ErrorCode getErrorCode() {
+        return errorCode;
     }
 }

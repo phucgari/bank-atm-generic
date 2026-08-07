@@ -2,6 +2,7 @@ package com.training.atm.validation.withdrawal;
 
 import com.training.atm.validation.ValidationResult;
 import com.training.atm.validation.ValidationRule;
+import com.training.atm.dto.ErrorCode;
 
 /** Rule: the account must have sufficient funds (respecting savings floor / overdraft limit). */
 public class AccountBalanceValidator implements ValidationRule<WithdrawalContext> {
@@ -9,6 +10,7 @@ public class AccountBalanceValidator implements ValidationRule<WithdrawalContext
     public ValidationResult validate(WithdrawalContext ctx) {
         return ctx.account().verifyWithdrawAmount(ctx.amount())
                 ? ValidationResult.valid()
-                : ValidationResult.invalid(ctx.account().getInsufficientFundsMessage(ctx.amount()));
+                : ValidationResult.invalid(ErrorCode.INSUFFICIENT_FUNDS,
+                        ctx.account().getInsufficientFundsMessage(ctx.amount()));
     }
 }

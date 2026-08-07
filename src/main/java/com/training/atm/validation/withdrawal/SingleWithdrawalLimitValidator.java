@@ -1,6 +1,7 @@
 package com.training.atm.validation.withdrawal;
 
 import com.training.atm.config.TransactionLimits;
+import com.training.atm.dto.ErrorCode;
 import com.training.atm.util.FormatUtil;
 import com.training.atm.validation.ValidationResult;
 import com.training.atm.validation.ValidationRule;
@@ -11,7 +12,7 @@ public class SingleWithdrawalLimitValidator implements ValidationRule<Withdrawal
     public ValidationResult validate(WithdrawalContext ctx) {
         return ctx.amount() <= TransactionLimits.MAX_WITHDRAWAL_SINGLE
                 ? ValidationResult.valid()
-                : ValidationResult.invalid("Single withdrawal limit is "
+                : ValidationResult.invalid(ErrorCode.LIMIT_EXCEEDED, "Single withdrawal limit is "
                         + FormatUtil.formatVND(TransactionLimits.MAX_WITHDRAWAL_SINGLE) + ".");
     }
 }

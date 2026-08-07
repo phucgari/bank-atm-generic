@@ -15,18 +15,22 @@ public final class WithdrawalResult extends ServiceResult<Transaction> implement
     private final long remainingAtmCash;
 
     private WithdrawalResult(boolean success, String message, Transaction transaction,
-                             Map<Long, Integer> dispensed, long remainingAtmCash) {
-        super(success, transaction, message, ErrorCode.SUCCESS);
+                             Map<Long, Integer> dispensed, long remainingAtmCash, ErrorCode errorCode) {
+        super(success, transaction, message, errorCode);
         this.dispensed = dispensed;
         this.remainingAtmCash = remainingAtmCash;
     }
 
     public static WithdrawalResult success(Transaction tx, Map<Long, Integer> dispensed, long remainingCash) {
-        return new WithdrawalResult(true, null, tx, dispensed, remainingCash);
+        return new WithdrawalResult(true, null, tx, dispensed, remainingCash, null);
     }
 
     public static WithdrawalResult failure(String message) {
-        return new WithdrawalResult(false, message, null, null, 0);
+        return failure(message, ErrorCode.INTERNAL_ERROR);
+    }
+
+    public static WithdrawalResult failure(String message, ErrorCode errorCode) {
+        return new WithdrawalResult(false, message, null, null, 0, errorCode);
     }
 
     public Transaction getTransaction() {

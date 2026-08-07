@@ -1,6 +1,7 @@
 package com.training.atm.service.impl;
 
 import com.training.atm.dto.WithdrawalResult;
+import com.training.atm.dto.ErrorCode;
 import com.training.atm.model.Account;
 import com.training.atm.model.Transaction;
 import com.training.atm.model.enums.TransactionType;
@@ -57,12 +58,14 @@ public class WithdrawalServiceImpl implements WithdrawalService {
                 account, amount, dailyTotal, cashDispenser.getAvailableCash());
 
         List<ValidationResult> errors = validator.validate(ctx);
-        if (!errors.isEmpty()) return WithdrawalResult.failure(errors.getFirst().getErrorMessage());
+        if (!errors.isEmpty()) return WithdrawalResult.failure(
+                errors.getFirst().getErrorMessage(), errors.getFirst().getErrorCode());
 
         Map<Long, Integer> dispensed = cashDispenser.dispenseCash(amount);
         if (dispensed == null)
             return WithdrawalResult.failure(
-                    "ATM cannot dispense the exact amount with available bills. Try a different amount.");
+                    "ATM cannot dispense the exact amount with available bills. Try a different amount.",
+                    ErrorCode.ATM_CASH_UNAVAILABLE);
 
         long newBalance = account.getAccountBalance() - amount;
         account.updateBalance(newBalance);

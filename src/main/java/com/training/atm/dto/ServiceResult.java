@@ -1,6 +1,7 @@
 package com.training.atm.dto;
 
 import java.util.function.Function;
+import java.util.Objects;
 
 public class ServiceResult<T> {
     private final boolean success;
@@ -20,23 +21,22 @@ public class ServiceResult<T> {
     }
 
     public static <T> ServiceResult<T> failure(String msg, ErrorCode code) {
+        Objects.requireNonNull(code, "error code must not be null");
         return new ServiceResult<>(false, null, msg, code);
     }
 
     public <R> ServiceResult<R> map(Function<T, R> mapper) {
-        if (success) {
-            return ServiceResult.success(mapper.apply(data));
-        } else {
-            return ServiceResult.failure(errorMessage, errorCode);
-        }
+        Objects.requireNonNull(mapper, "mapper must not be null");
+        return success
+                ? ServiceResult.success(mapper.apply(data))
+                : ServiceResult.failure(errorMessage, errorCode);
     }
 
     public ServiceResult<T> flatMap(Function<T, ServiceResult<T>> mapper) {
-        if (success) {
-            return mapper.apply(data);
-        } else {
-            return ServiceResult.failure(errorMessage, errorCode);
-        }
+        Objects.requireNonNull(mapper, "mapper must not be null");
+        return success
+                ? Objects.requireNonNull(mapper.apply(data), "mapper result must not be null")
+                : ServiceResult.failure(errorMessage, errorCode);
     }
 
     public ErrorCode getErrorCode() {
@@ -59,4 +59,3 @@ public class ServiceResult<T> {
         return errorMessage;
     }
 }
-

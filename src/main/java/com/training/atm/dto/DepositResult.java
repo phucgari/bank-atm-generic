@@ -8,16 +8,20 @@ import com.training.atm.model.Transaction;
  */
 public final class DepositResult extends ServiceResult<Transaction> implements OperationResult {
 
-    private DepositResult(boolean success, String message, Transaction transaction) {
-        super(success, transaction, message, ErrorCode.SUCCESS);
+    private DepositResult(boolean success, String message, Transaction transaction, ErrorCode errorCode) {
+        super(success, transaction, message, errorCode);
     }
 
     public static DepositResult success(Transaction tx) {
-        return new DepositResult(true, null, tx);
+        return new DepositResult(true, null, tx, null);
     }
 
     public static DepositResult failure(String message) {
-        return new DepositResult(false, message, null);
+        return failure(message, ErrorCode.INTERNAL_ERROR);
+    }
+
+    public static DepositResult failure(String message, ErrorCode errorCode) {
+        return new DepositResult(false, message, null, errorCode);
     }
 
     public Transaction getTransaction() {

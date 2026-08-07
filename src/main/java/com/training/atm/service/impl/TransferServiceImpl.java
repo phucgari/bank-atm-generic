@@ -81,7 +81,8 @@ public class TransferServiceImpl implements TransferService {
                 source, destAccountNumber, destOpt.orElse(null), amount, todayTotal);
 
         List<ValidationResult> errors = validator.validate(ctx);
-        if (!errors.isEmpty()) return TransferResult.failure(errors.getFirst().getErrorMessage());
+        if (!errors.isEmpty()) return TransferResult.failure(
+                errors.getFirst().getErrorMessage(), errors.getFirst().getErrorCode());
 
         // destAccount is guaranteed non-null here (DestinationExistsValidator passed).
         Account dest = ctx.destAccount();
