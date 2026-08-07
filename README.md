@@ -131,7 +131,27 @@ com.training.atm
 
 ## Design Patterns
 
-Four GoF patterns are applied to concrete features of this project. Each pattern targets a specific design problem; the sections below explain the problem, the solution, and exactly which files are involved.
+The project applies several GoF patterns to concrete features. Each pattern targets a specific design problem; the sections below explain the problem, the solution, and exactly which files are involved.
+
+---
+
+### Observer — Generic Domain Event Bus
+
+The `event/` package provides type-safe event publishing. `EventListener<E>`
+can only receive its declared `DomainEvent` subtype, while `EventBus` stores
+listeners by event class and dispatches events without unchecked casts at
+call sites.
+
+```java
+EventBus eventBus = new EventBus();
+eventBus.subscribe(WithdrawalEvent.class,
+        event -> audit(event.getTransaction().getTransactionId()));
+eventBus.publish(new WithdrawalEvent(transaction));
+```
+
+Available domain events include `WithdrawalEvent`, `TransferEvent`, and
+`CardBlockedEvent`. Adding a new event requires only a new `DomainEvent`
+subclass and typed subscriptions.
 
 ---
 
