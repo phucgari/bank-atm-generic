@@ -29,13 +29,19 @@ public class JdbcTransactionManager implements TransactionManager {
                 T result = cb.call();
                 con.commit();
                 return result;
-            } catch (Exception e) {
+            } catch (Throwable failure) {
                 try {
                     con.rollback();
                 } catch (SQLException ex) {
-                    e.addSuppressed(ex);
+                    failure.addSuppressed(ex);
                 }
-                throw (e instanceof RuntimeException) ? (RuntimeException) e : new RuntimeException(e);
+                if (failure instanceof Error error) {
+                    throw error;
+                }
+                if (failure instanceof RuntimeException runtimeException) {
+                    throw runtimeException;
+                }
+                throw new RuntimeException(failure);
             } finally {
                 txContext.clear();
                 try {
