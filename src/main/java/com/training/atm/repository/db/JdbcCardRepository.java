@@ -6,9 +6,6 @@ import com.training.atm.model.enums.CardStatus;
 import com.training.atm.repository.CardRepository;
 import com.training.atm.util.SecurityUtil;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -72,7 +69,7 @@ public class JdbcCardRepository extends AbstractJdbcRepository<ATMCard, String> 
     @Override
     protected void setInsertParameters(PreparedStatement ps, ATMCard entity) throws SQLException {
         ps.setString(1, entity.getCardId());
-        ps.setString(2, entity.getPin());
+        ps.setString(2, SecurityUtil.normalizeStoredPin(entity.getPin()));
         ps.setString(3, entity.getStatus().name());
         ps.setInt(4, entity.getFailedAttempts());
         ps.setString(5, entity.getAccountNumber());
@@ -80,7 +77,7 @@ public class JdbcCardRepository extends AbstractJdbcRepository<ATMCard, String> 
 
     @Override
     protected void setUpdateParameters(PreparedStatement ps, ATMCard entity) throws SQLException {
-        ps.setString(1, entity.getPin());
+        ps.setString(1, SecurityUtil.normalizeStoredPin(entity.getPin()));
         ps.setString(2, entity.getStatus().name());
         ps.setInt(3, entity.getFailedAttempts());
         ps.setString(4, entity.getAccountNumber());
