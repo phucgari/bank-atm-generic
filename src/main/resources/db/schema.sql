@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS transactions (
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_transactions_type CHECK (type IN ('DEPOSIT', 'WITHDRAWAL', 'TRANSFER_IN', 'TRANSFER_OUT', 'INTEREST')),
     CONSTRAINT fk_transactions_account FOREIGN KEY (account_id) REFERENCES accounts (account_id) ON DELETE CASCADE,
-    INDEX created_time_by_account (account_id, created_at)
+    INDEX created_time_by_account (account_id, created_at),
+    INDEX transaction_type_by_account (account_id, type)
 );
 
 -- -------- scheduled_transfers ----------------------------------------------
@@ -64,7 +65,10 @@ CREATE TABLE IF NOT EXISTS scheduled_transfers (
     CONSTRAINT chk_scheduled_frequency CHECK (frequency IN ('DAILY', 'WEEKLY', 'MONTHLY')),
     CONSTRAINT chk_scheduled_status CHECK (status IN ('ACTIVE', 'PAUSED', 'COMPLETED', 'FAILED')),
     CONSTRAINT fk_scheduled_source FOREIGN KEY (source_account_id) REFERENCES accounts (account_id),
-    CONSTRAINT fk_scheduled_dest FOREIGN KEY (dest_account_id) REFERENCES accounts (account_id)
+    CONSTRAINT fk_scheduled_dest FOREIGN KEY (dest_account_id) REFERENCES accounts (account_id),
+    INDEX scheduled_source_date (source_account_id, next_execution),
+    INDEX scheduled_status_date (status, next_execution),
+    INDEX scheduled_source_status (source_account_id, status)
 );
 
 -- -------- atm_machines ------------------------------------------------------
@@ -85,5 +89,6 @@ CREATE TABLE IF NOT EXISTS admin_audit_log (
     admin_username  VARCHAR(100) NOT NULL,
     action          VARCHAR(255) NOT NULL,
     details         VARCHAR(1000),
-    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX admin_log_created_at (created_at)
 );
