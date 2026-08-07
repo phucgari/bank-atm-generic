@@ -9,8 +9,7 @@ public class SameAccountTransferValidator implements ValidationRule<TransferCont
     @Override
     public ValidationResult validate(TransferContext ctx) {
         return ctx.source().getAccountNumber().equals(ctx.destAccountNumber())
-                ? ValidationResult.invalid(ErrorCode.SAME_ACCOUNT,
-                        "Source and destination accounts must be different.")
+                ? ValidationResult.invalid(ErrorCode.SAME_ACCOUNT)
                 : ValidationResult.valid();
     }
 }

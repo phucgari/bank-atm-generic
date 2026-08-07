@@ -12,7 +12,7 @@ public class SingleTransferLimitValidator implements ValidationRule<TransferCont
     public ValidationResult validate(TransferContext ctx) {
         return ctx.amount() <= TransactionLimits.MAX_TRANSFER_SINGLE
                 ? ValidationResult.valid()
-                : ValidationResult.invalid(ErrorCode.LIMIT_EXCEEDED, "Single transfer limit is "
-                        + FormatUtil.formatVND(TransactionLimits.MAX_TRANSFER_SINGLE) + ".");
+                : ValidationResult.invalid(ErrorCode.SINGLE_TRANSFER_LIMIT_EXCEEDED,
+                        FormatUtil.formatVND(TransactionLimits.MAX_TRANSFER_SINGLE));
     }
 }

@@ -10,7 +10,6 @@ public class AtmCashValidator implements ValidationRule<WithdrawalContext> {
     public ValidationResult validate(WithdrawalContext ctx) {
         return ctx.atmAvailableCash() >= ctx.amount()
                 ? ValidationResult.valid()
-                : ValidationResult.invalid(ErrorCode.ATM_CASH_UNAVAILABLE,
-                        "ATM does not have sufficient cash for this transaction.");
+                : ValidationResult.invalid(ErrorCode.ATM_CASH_UNAVAILABLE);
     }
 }

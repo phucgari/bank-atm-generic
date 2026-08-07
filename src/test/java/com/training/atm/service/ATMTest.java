@@ -20,7 +20,7 @@ public class ATMTest {
         assertTrue(screen.containsLine("Location: Downtown"));
         assertTrue(screen.containsLine("Branch:   Main Branch"));
         assertTrue(screen.containsExactLine("========================================"));
-        assertEquals(4, screen.printedLines.size());
+        assertEquals(5, screen.printedLines.size());
     }
 
     @Test
@@ -32,7 +32,7 @@ public class ATMTest {
         atm.show(screen);
 
         assertEquals("========================================", screen.printedLines.get(0));
-        assertEquals("========================================", screen.printedLines.get(3));
+        assertEquals("========================================", screen.printedLines.get(4));
     }
 
     @Test

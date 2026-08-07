@@ -19,12 +19,8 @@ public final class TransferResult extends ServiceResult<Transaction> implements 
         return new TransferResult(true, null, tx, destCustomerName, null);
     }
 
-    public static TransferResult failure(String message) {
-        return failure(message, ErrorCode.INTERNAL_ERROR);
-    }
-
-    public static TransferResult failure(String message, ErrorCode errorCode) {
-        return new TransferResult(false, message, null, null, errorCode);
+    public static TransferResult failure(ErrorCode errorCode) {
+        return new TransferResult(false, errorCode.format(), null, null, errorCode);
     }
 
     public Transaction getTransaction() {

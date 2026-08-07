@@ -13,7 +13,7 @@ public class DenominationDepositValidator implements ValidationRule<DepositConte
     public ValidationResult validate(DepositContext ctx) {
         return ValidationUtil.isMultipleOf(ctx.amount(), TransactionLimits.DEPOSIT_DENOMINATION)
                 ? ValidationResult.valid()
-                : ValidationResult.invalid(ErrorCode.INVALID_AMOUNT, "Deposit amount must be a positive multiple of "
-                        + FormatUtil.formatVND(TransactionLimits.DEPOSIT_DENOMINATION) + ".");
+                : ValidationResult.invalid(ErrorCode.INVALID_DEPOSIT_AMOUNT,
+                        FormatUtil.formatVND(TransactionLimits.DEPOSIT_DENOMINATION));
     }
 }

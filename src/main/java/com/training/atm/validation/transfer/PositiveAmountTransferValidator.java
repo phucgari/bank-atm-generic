@@ -10,6 +10,6 @@ public class PositiveAmountTransferValidator implements ValidationRule<TransferC
     public ValidationResult validate(TransferContext ctx) {
         return ctx.amount() > 0
                 ? ValidationResult.valid()
-                : ValidationResult.invalid(ErrorCode.INVALID_AMOUNT, "Transfer amount must be positive.");
+                : ValidationResult.invalid(ErrorCode.INVALID_TRANSFER_AMOUNT);
     }
 }

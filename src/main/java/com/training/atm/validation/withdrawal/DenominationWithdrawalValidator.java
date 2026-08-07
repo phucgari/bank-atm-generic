@@ -13,7 +13,7 @@ public class DenominationWithdrawalValidator implements ValidationRule<Withdrawa
     public ValidationResult validate(WithdrawalContext ctx) {
         return ValidationUtil.isMultipleOf(ctx.amount(), TransactionLimits.WITHDRAWAL_DENOMINATION)
                 ? ValidationResult.valid()
-                : ValidationResult.invalid(ErrorCode.INVALID_AMOUNT, "Withdrawal amount must be a positive multiple of "
-                        + FormatUtil.formatVND(TransactionLimits.WITHDRAWAL_DENOMINATION) + ".");
+                : ValidationResult.invalid(ErrorCode.INVALID_WITHDRAWAL_AMOUNT,
+                        FormatUtil.formatVND(TransactionLimits.WITHDRAWAL_DENOMINATION));
     }
 }

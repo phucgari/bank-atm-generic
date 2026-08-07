@@ -40,7 +40,7 @@ public class DepositServiceImplTest {
         assertNull(result.getErrorCode());
         assertEquals(200_000, account.getAccountBalance());
         assertEquals(1, txRepo.saved.size());
-        assertEquals(100_000, txRepo.saved.get(0).getAmount());
+        assertEquals(100_000, txRepo.saved.getFirst().getAmount());
     }
 
     @Test
@@ -63,7 +63,7 @@ public class DepositServiceImplTest {
         DepositResult result = service.deposit(account, 15_000);
 
         assertFalse(result.isSuccess());
-        assertEquals(ErrorCode.INVALID_AMOUNT, result.getErrorCode());
+        assertEquals(ErrorCode.INVALID_DEPOSIT_AMOUNT, result.getErrorCode());
         assertEquals(100_000, account.getAccountBalance());
         assertTrue(txRepo.saved.isEmpty());
         assertEquals(0, denomRepo.depositedAmount);
@@ -78,7 +78,7 @@ public class DepositServiceImplTest {
         DepositResult result = service.deposit(account, 51_000_000);
 
         assertFalse(result.isSuccess());
-        assertEquals(ErrorCode.LIMIT_EXCEEDED, result.getErrorCode());
+        assertEquals(ErrorCode.SINGLE_DEPOSIT_LIMIT_EXCEEDED, result.getErrorCode());
         assertEquals(100_000, account.getAccountBalance());
         assertTrue(txRepo.saved.isEmpty());
     }

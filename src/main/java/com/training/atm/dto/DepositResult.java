@@ -16,12 +16,8 @@ public final class DepositResult extends ServiceResult<Transaction> implements O
         return new DepositResult(true, null, tx, null);
     }
 
-    public static DepositResult failure(String message) {
-        return failure(message, ErrorCode.INTERNAL_ERROR);
-    }
-
-    public static DepositResult failure(String message, ErrorCode errorCode) {
-        return new DepositResult(false, message, null, errorCode);
+    public static DepositResult failure(ErrorCode errorCode) {
+        return new DepositResult(false, errorCode.format(), null, errorCode);
     }
 
     public Transaction getTransaction() {

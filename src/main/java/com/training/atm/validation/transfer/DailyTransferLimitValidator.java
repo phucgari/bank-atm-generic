@@ -12,8 +12,7 @@ public class DailyTransferLimitValidator implements ValidationRule<TransferConte
     public ValidationResult validate(TransferContext ctx) {
         return ctx.dailyTotal() + ctx.amount() <= TransactionLimits.MAX_TRANSFER_DAILY
                 ? ValidationResult.valid()
-                : ValidationResult.invalid(ErrorCode.LIMIT_EXCEEDED, "Daily transfer limit of "
-                        + FormatUtil.formatVND(TransactionLimits.MAX_TRANSFER_DAILY)
-                        + " would be exceeded.");
+                : ValidationResult.invalid(ErrorCode.DAILY_TRANSFER_LIMIT_EXCEEDED,
+                        FormatUtil.formatVND(TransactionLimits.MAX_TRANSFER_DAILY));
     }
 }

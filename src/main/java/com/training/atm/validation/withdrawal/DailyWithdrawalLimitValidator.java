@@ -12,8 +12,7 @@ public class DailyWithdrawalLimitValidator implements ValidationRule<WithdrawalC
     public ValidationResult validate(WithdrawalContext ctx) {
         return ctx.dailyTotal() + ctx.amount() <= TransactionLimits.MAX_WITHDRAWAL_DAILY
                 ? ValidationResult.valid()
-                : ValidationResult.invalid(ErrorCode.LIMIT_EXCEEDED, "Daily withdrawal limit of "
-                        + FormatUtil.formatVND(TransactionLimits.MAX_WITHDRAWAL_DAILY)
-                        + " would be exceeded.");
+                : ValidationResult.invalid(ErrorCode.DAILY_WITHDRAWAL_LIMIT_EXCEEDED,
+                        FormatUtil.formatVND(TransactionLimits.MAX_WITHDRAWAL_DAILY));
     }
 }

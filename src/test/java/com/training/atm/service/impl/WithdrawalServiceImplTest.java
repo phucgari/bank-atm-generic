@@ -43,7 +43,7 @@ public class WithdrawalServiceImplTest {
         assertNull(result.getErrorCode());
         assertEquals(4_500_000, account.getAccountBalance());
         assertEquals(1, txRepo.saved.size());
-        assertEquals(500_000, txRepo.saved.get(0).getAmount());
+        assertEquals(500_000, txRepo.saved.getFirst().getAmount());
         assertNotNull(result.getDispensed());
     }
 
@@ -68,7 +68,7 @@ public class WithdrawalServiceImplTest {
         WithdrawalResult result = service.withdraw(account, 75_000);
 
         assertFalse(result.isSuccess());
-        assertEquals(ErrorCode.INVALID_AMOUNT, result.getErrorCode());
+        assertEquals(ErrorCode.INVALID_WITHDRAWAL_AMOUNT, result.getErrorCode());
         assertEquals(5_000_000, account.getAccountBalance());
         assertTrue(txRepo.saved.isEmpty());
     }
@@ -82,7 +82,7 @@ public class WithdrawalServiceImplTest {
         WithdrawalResult result = service.withdraw(account, 21_000_000);
 
         assertFalse(result.isSuccess());
-        assertEquals(ErrorCode.LIMIT_EXCEEDED, result.getErrorCode());
+        assertEquals(ErrorCode.SINGLE_WITHDRAWAL_LIMIT_EXCEEDED, result.getErrorCode());
         assertEquals(25_000_000, account.getAccountBalance());
     }
 
@@ -99,7 +99,7 @@ public class WithdrawalServiceImplTest {
         WithdrawalResult result = service.withdraw(account, 5_000_000);
 
         assertFalse(result.isSuccess());
-        assertEquals(ErrorCode.LIMIT_EXCEEDED, result.getErrorCode());
+        assertEquals(ErrorCode.DAILY_WITHDRAWAL_LIMIT_EXCEEDED, result.getErrorCode());
     }
 
     @Test
@@ -165,7 +165,7 @@ public class WithdrawalServiceImplTest {
         WithdrawalResult result = service.withdraw(account, 150_000);
 
         assertFalse(result.isSuccess());
-        assertEquals(ErrorCode.ATM_CASH_UNAVAILABLE, result.getErrorCode());
+        assertEquals(ErrorCode.ATM_CASH_DISPENSE_UNAVAILABLE, result.getErrorCode());
     }
 
     @Test

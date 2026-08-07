@@ -25,12 +25,8 @@ public final class WithdrawalResult extends ServiceResult<Transaction> implement
         return new WithdrawalResult(true, null, tx, dispensed, remainingCash, null);
     }
 
-    public static WithdrawalResult failure(String message) {
-        return failure(message, ErrorCode.INTERNAL_ERROR);
-    }
-
-    public static WithdrawalResult failure(String message, ErrorCode errorCode) {
-        return new WithdrawalResult(false, message, null, null, 0, errorCode);
+    public static WithdrawalResult failure(ErrorCode errorCode) {
+        return new WithdrawalResult(false, errorCode.format(), null, null, 0, errorCode);
     }
 
     public Transaction getTransaction() {

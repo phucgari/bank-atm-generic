@@ -1,6 +1,7 @@
 package com.training.atm.service;
 
 import com.training.atm.testutil.RecordingDisplayScreen;
+import com.training.atm.util.FormatUtil;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -37,9 +38,9 @@ public class ReceiptPrinterTest {
         assertTrue(screen.containsLine("Type"));
         assertTrue(screen.containsLine("WITHDRAWAL"));
         assertTrue(screen.containsLine("Amount"));
-        assertTrue(screen.containsLine("250,000 VND"));
+        assertTrue(screen.containsLine(FormatUtil.formatVND(250_000)));
         assertTrue(screen.containsLine("Balance"));
-        assertTrue(screen.containsLine("750,000 VND"));
+        assertTrue(screen.containsLine(FormatUtil.formatVND(750_000)));
         assertTrue(screen.containsLine("Branch"));
         assertTrue(screen.containsLine("Main Branch"));
         assertTrue(screen.containsLine("Bill breakdown:"));
@@ -57,9 +58,9 @@ public class ReceiptPrinterTest {
                 "WITHDRAWAL", 900_000, 100_000, "Branch", dispensed);
 
         assertTrue(screen.containsLine("Bill breakdown:"));
-        assertTrue(screen.containsLine("1 x 500,000 VND"));
-        assertTrue(screen.containsLine("3 x 100,000 VND"));
-        assertTrue(screen.containsLine("2 x 50,000 VND"));
+        assertTrue(screen.containsLine("1 x " + FormatUtil.formatVND(500_000)));
+        assertTrue(screen.containsLine("3 x " + FormatUtil.formatVND(100_000)));
+        assertTrue(screen.containsLine("2 x " + FormatUtil.formatVND(50_000)));
         assertTrue(screen.containsLine("Total bills: 6"));
     }
 
@@ -70,7 +71,7 @@ public class ReceiptPrinterTest {
 
         assertFalse(screen.containsLine("Amount"));
         assertTrue(screen.containsLine("Balance"));
-        assertTrue(screen.containsLine("1,000,000 VND"));
+        assertTrue(screen.containsLine(FormatUtil.formatVND(1_000_000)));
     }
 
     @Test
@@ -101,8 +102,8 @@ public class ReceiptPrinterTest {
         printer.printBillBreakdown(dispensed);
 
         assertTrue(screen.containsLine("Bill breakdown:"));
-        assertTrue(screen.containsLine("2 x 200,000 VND"));
-        assertTrue(screen.containsLine("1 x 100,000 VND"));
+        assertTrue(screen.containsLine("2 x " + FormatUtil.formatVND(200_000)));
+        assertTrue(screen.containsLine("1 x " + FormatUtil.formatVND(100_000)));
         assertTrue(screen.containsLine("Total bills: 3"));
     }
 

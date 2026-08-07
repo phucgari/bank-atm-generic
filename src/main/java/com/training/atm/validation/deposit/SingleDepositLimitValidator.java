@@ -12,7 +12,7 @@ public class SingleDepositLimitValidator implements ValidationRule<DepositContex
     public ValidationResult validate(DepositContext ctx) {
         return ctx.amount() <= TransactionLimits.MAX_DEPOSIT_SINGLE
                 ? ValidationResult.valid()
-                : ValidationResult.invalid(ErrorCode.LIMIT_EXCEEDED, "Single deposit limit is "
-                        + FormatUtil.formatVND(TransactionLimits.MAX_DEPOSIT_SINGLE) + ".");
+                : ValidationResult.invalid(ErrorCode.SINGLE_DEPOSIT_LIMIT_EXCEEDED,
+                        FormatUtil.formatVND(TransactionLimits.MAX_DEPOSIT_SINGLE));
     }
 }

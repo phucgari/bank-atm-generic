@@ -45,7 +45,7 @@ public class ServiceLogicTest {
         ServiceResult<Transaction> result = service.deposit(account, 15_000);
 
         assertFalse(result.isSuccess());
-        assertEquals(ErrorCode.INVALID_AMOUNT, result.getErrorCode());
+        assertEquals(ErrorCode.INVALID_DEPOSIT_AMOUNT, result.getErrorCode());
         assertEquals(100_000, account.getAccountBalance());
         assertTrue(transactions.saved.isEmpty());
     }
@@ -117,10 +117,10 @@ public class ServiceLogicTest {
     @Test
     public void serviceResultMapPreservesFailureAndTransformsSuccess() {
         ServiceResult<Integer> success = ServiceResult.success(10);
-        ServiceResult<Integer> failure = ServiceResult.failure("Invalid", ErrorCode.INVALID_AMOUNT);
+        ServiceResult<Integer> failure = ServiceResult.failure(ErrorCode.INVALID_TRANSFER_AMOUNT);
 
         assertEquals(Integer.valueOf(20), success.map(value -> value * 2).getData());
-        assertEquals(ErrorCode.INVALID_AMOUNT, failure.map(value -> value * 2).getErrorCode());
+        assertEquals(ErrorCode.INVALID_TRANSFER_AMOUNT, failure.map(value -> value * 2).getErrorCode());
     }
 
     @Test

@@ -20,9 +20,13 @@ public class ServiceResult<T> {
         return new ServiceResult<>(true, data, null, null);
     }
 
-    public static <T> ServiceResult<T> failure(String msg, ErrorCode code) {
+    public static <T> ServiceResult<T> failure(ErrorCode code, Object... values) {
         Objects.requireNonNull(code, "error code must not be null");
-        return new ServiceResult<>(false, null, msg, code);
+        return failure(code.format(values), code);
+    }
+
+    private static <T> ServiceResult<T> failure(String message, ErrorCode code) {
+        return new ServiceResult<>(false, null, message, code);
     }
 
     public <R> ServiceResult<R> map(Function<T, R> mapper) {

@@ -12,7 +12,7 @@ public class SingleWithdrawalLimitValidator implements ValidationRule<Withdrawal
     public ValidationResult validate(WithdrawalContext ctx) {
         return ctx.amount() <= TransactionLimits.MAX_WITHDRAWAL_SINGLE
                 ? ValidationResult.valid()
-                : ValidationResult.invalid(ErrorCode.LIMIT_EXCEEDED, "Single withdrawal limit is "
-                        + FormatUtil.formatVND(TransactionLimits.MAX_WITHDRAWAL_SINGLE) + ".");
+                : ValidationResult.invalid(ErrorCode.SINGLE_WITHDRAWAL_LIMIT_EXCEEDED,
+                        FormatUtil.formatVND(TransactionLimits.MAX_WITHDRAWAL_SINGLE));
     }
 }

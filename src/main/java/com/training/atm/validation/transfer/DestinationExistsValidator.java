@@ -10,7 +10,6 @@ public class DestinationExistsValidator implements ValidationRule<TransferContex
     public ValidationResult validate(TransferContext ctx) {
         return ctx.destAccount() != null
                 ? ValidationResult.valid()
-                : ValidationResult.invalid(ErrorCode.ACCOUNT_NOT_FOUND,
-                        "Destination account " + ctx.destAccountNumber() + " not found.");
+                : ValidationResult.invalid(ErrorCode.ACCOUNT_NOT_FOUND, ctx.destAccountNumber());
     }
 }

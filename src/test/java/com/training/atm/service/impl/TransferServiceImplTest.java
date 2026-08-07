@@ -116,7 +116,7 @@ public class TransferServiceImplTest {
         TransferResult result = service.transfer(source, "ACC002", 11_000_000);
 
         assertFalse(result.isSuccess());
-        assertEquals(ErrorCode.LIMIT_EXCEEDED, result.getErrorCode());
+        assertEquals(ErrorCode.SINGLE_TRANSFER_LIMIT_EXCEEDED, result.getErrorCode());
     }
 
     @Test
@@ -133,7 +133,7 @@ public class TransferServiceImplTest {
         TransferResult result = service.transfer(source, "ACC002", 10_000_000);
 
         assertFalse(result.isSuccess());
-        assertEquals(ErrorCode.LIMIT_EXCEEDED, result.getErrorCode());
+        assertEquals(ErrorCode.DAILY_TRANSFER_LIMIT_EXCEEDED, result.getErrorCode());
     }
 
     @Test

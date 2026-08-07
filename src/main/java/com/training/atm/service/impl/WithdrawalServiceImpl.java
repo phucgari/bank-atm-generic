@@ -58,14 +58,11 @@ public class WithdrawalServiceImpl implements WithdrawalService {
                 account, amount, dailyTotal, cashDispenser.getAvailableCash());
 
         List<ValidationResult> errors = validator.validate(ctx);
-        if (!errors.isEmpty()) return WithdrawalResult.failure(
-                errors.getFirst().getErrorMessage(), errors.getFirst().getErrorCode());
+        if (!errors.isEmpty()) return WithdrawalResult.failure(errors.getFirst().getErrorCode());
 
         Map<Long, Integer> dispensed = cashDispenser.dispenseCash(amount);
         if (dispensed == null)
-            return WithdrawalResult.failure(
-                    "ATM cannot dispense the exact amount with available bills. Try a different amount.",
-                    ErrorCode.ATM_CASH_UNAVAILABLE);
+            return WithdrawalResult.failure(ErrorCode.ATM_CASH_DISPENSE_UNAVAILABLE);
 
         long newBalance = account.getAccountBalance() - amount;
         account.updateBalance(newBalance);
