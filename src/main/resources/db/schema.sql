@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS scheduled_transfers (
     executed_count   INT NOT NULL DEFAULT 0,
     end_date         DATE NULL,
     CONSTRAINT chk_scheduled_frequency CHECK (frequency IN ('ONE_TIME', 'DAILY', 'WEEKLY', 'MONTHLY')),
-    CONSTRAINT chk_scheduled_status CHECK (status IN ('ACTIVE', 'PAUSED', 'CANCELED', 'COMPLETED', 'FAILED')),
+    CONSTRAINT chk_scheduled_status CHECK (status IN ('ACTIVE', 'PAUSED', 'CANCELLED', 'COMPLETED', 'FAILED')),
     CONSTRAINT fk_scheduled_source FOREIGN KEY (source_account_id) REFERENCES accounts (account_id),
     CONSTRAINT fk_scheduled_dest FOREIGN KEY (dest_account_id) REFERENCES accounts (account_id),
     INDEX scheduled_source_date (source_account_id, next_execution),
