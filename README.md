@@ -1,4 +1,4 @@
-# Bank ATM System Simulation
+# Bank ATM System Generic Simulation
 
 A console-based Bank ATM System simulation built with Java 17+ (Core only, no frameworks).
 
