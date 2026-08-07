@@ -4,7 +4,6 @@ import com.training.atm.command.DepositCommand;
 import com.training.atm.command.TransferCommand;
 import com.training.atm.command.WithdrawCommand;
 import com.training.atm.config.TransactionLimits;
-import com.training.atm.config.db.TransactionManager;
 import com.training.atm.dto.*;
 import com.training.atm.model.*;
 import com.training.atm.model.enums.*;
@@ -62,7 +61,6 @@ public class CustomerSession {
     private final CardRepository              cardRepo;
     private final ScheduledTransferRepository schedRepo;
     private final ATMInfoRepository           atmInfo;
-    private final TransactionManager          transactionManager;
 
     /** Single-parameter constructor — no more Long Parameter List. */
     public CustomerSession(CustomerSessionDeps deps) {
@@ -79,7 +77,6 @@ public class CustomerSession {
         this.cardRepo           = deps.cardRepo();
         this.schedRepo          = deps.schedRepo();
         this.atmInfo            = deps.atmInfo();
-        this.transactionManager = deps.transactionManager();
     }
 
     public void run() {
@@ -168,7 +165,7 @@ public class CustomerSession {
 
         // Command pattern: encapsulate the operation.
         WithdrawCommand cmd = new WithdrawCommand(account, amount, withdrawalService);
-        WithdrawalResult result = transactionManager.executeInTransaction(cmd);
+        WithdrawalResult result = cmd.call();
         if (!result.isSuccess()) { screen.println("ERROR: " + result.getMessage()); return; }
 
         screen.println(String.format("  %-20s: %s", "Amount",
@@ -213,7 +210,7 @@ public class CustomerSession {
 
         // Command pattern: encapsulate the operation.
         DepositCommand cmd = new DepositCommand(account, amount, depositService);
-        DepositResult result = transactionManager.executeInTransaction(cmd);
+        DepositResult result = cmd.call();
         if (!result.isSuccess()) { screen.println("ERROR: " + result.getMessage()); return; }
         screen.println("Deposit successful!");
         screen.println("  Amount      : " + FormatUtil.formatVND(result.getTransaction().getAmount()));
@@ -289,7 +286,7 @@ public class CustomerSession {
 
         // Command pattern: encapsulate the operation.
         TransferCommand cmd = new TransferCommand(account, destAccNum, amount, transferService);
-        TransferResult result = transactionManager.executeInTransaction(cmd);
+        TransferResult result = cmd.call();
         if (!result.isSuccess()) { screen.println("ERROR: " + result.getMessage()); return; }
         screen.println("Transfer successful!");
         screen.println("  Amount transferred   : " + FormatUtil.formatVND(result.getTransaction().getAmount()));

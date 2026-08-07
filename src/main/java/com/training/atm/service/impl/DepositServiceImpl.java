@@ -1,6 +1,7 @@
 package com.training.atm.service.impl;
 
 import com.training.atm.dto.DepositResult;
+import com.training.atm.config.db.TransactionManager;
 import com.training.atm.model.Account;
 import com.training.atm.model.Transaction;
 import com.training.atm.model.enums.TransactionType;
@@ -14,6 +15,7 @@ import com.training.atm.validation.ValidationResult;
 import com.training.atm.validation.deposit.*;
 
 import java.util.List;
+import java.util.concurrent.Callable;
 
 /**
  * Implements deposit business rules (FR-03).
@@ -30,6 +32,7 @@ public class DepositServiceImpl implements DepositService {
     private final AccountRepository     accountRepo;
     private final TransactionRepository txRepo;
     private final CashDispenser         cashDispenser;
+    private final TransactionManager    transactionManager;
 
     private final EntityValidator<DepositContext> validator = new EntityValidator<DepositContext>()
             .addRule(new DenominationDepositValidator())
@@ -38,13 +41,25 @@ public class DepositServiceImpl implements DepositService {
     public DepositServiceImpl(AccountRepository accountRepo,
                                TransactionRepository txRepo,
                                CashDispenser cashDispenser) {
+        this(accountRepo, txRepo, cashDispenser, null);
+    }
+
+    public DepositServiceImpl(AccountRepository accountRepo,
+                               TransactionRepository txRepo,
+                               CashDispenser cashDispenser,
+                               TransactionManager transactionManager) {
         this.accountRepo   = accountRepo;
         this.txRepo        = txRepo;
         this.cashDispenser = cashDispenser;
+        this.transactionManager = transactionManager;
     }
 
     @Override
     public DepositResult deposit(Account account, long amount) {
+        return executeTransaction(() -> depositInternal(account, amount));
+    }
+
+    private DepositResult depositInternal(Account account, long amount) {
         DepositContext ctx = new DepositContext(account, amount);
 
         List<ValidationResult> errors = validator.validate(ctx);
@@ -60,5 +75,16 @@ public class DepositServiceImpl implements DepositService {
         txRepo.save(tx);
 
         return DepositResult.success(tx);
+    }
+
+    private <T> T executeTransaction(Callable<T> action) {
+        if (transactionManager == null) {
+            try {
+                return action.call();
+            } catch (Exception e) {
+                throw new IllegalStateException("Deposit transaction failed", e);
+            }
+        }
+        return transactionManager.executeInTransaction(action);
     }
 }

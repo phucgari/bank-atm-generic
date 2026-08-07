@@ -41,8 +41,10 @@ public class App {
         ATM            atm            = new ATM(atmConfig);
 
         // --- Business services ---
-        WithdrawalService withdrawalService = new WithdrawalServiceImpl(accountRepo, txRepo, cashDispenser);
-        DepositService    depositService    = new DepositServiceImpl(accountRepo, txRepo, cashDispenser);
+        WithdrawalService withdrawalService = new WithdrawalServiceImpl(
+                accountRepo, txRepo, cashDispenser, transactionManager);
+        DepositService    depositService    = new DepositServiceImpl(
+                accountRepo, txRepo, cashDispenser, transactionManager);
         TransferService   transferService   = new TransferServiceImpl(accountRepo, txRepo, schedRepo, customerRepo, transactionManager);
         InterestService   interestService   = new InterestServiceImpl(accountRepo, txRepo);
 
@@ -54,7 +56,7 @@ public class App {
         CustomerSession customerSession = new CustomerSession(new CustomerSessionDeps(
                 screen, cardScanner, cashDispenser, receiptPrinter,
                 withdrawalService, depositService, transferService,
-                accountRepo, txRepo, customerRepo, cardRepo, schedRepo, atmConfig, transactionManager));
+                accountRepo, txRepo, customerRepo, cardRepo, schedRepo, atmConfig));
 
         AdminSession adminSession = new AdminSession(new AdminSessionDeps(
                 screen, interestService, atmConfig, denominationRepo,

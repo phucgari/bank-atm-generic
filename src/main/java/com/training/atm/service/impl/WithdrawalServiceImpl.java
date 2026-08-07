@@ -2,6 +2,7 @@ package com.training.atm.service.impl;
 
 import com.training.atm.dto.WithdrawalResult;
 import com.training.atm.dto.ErrorCode;
+import com.training.atm.config.db.TransactionManager;
 import com.training.atm.model.Account;
 import com.training.atm.model.Transaction;
 import com.training.atm.model.enums.TransactionType;
@@ -16,6 +17,7 @@ import com.training.atm.validation.withdrawal.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 /**
  * Implements withdrawal business rules (FR-02).
@@ -34,6 +36,7 @@ public class WithdrawalServiceImpl implements WithdrawalService {
     private final AccountRepository              accountRepo;
     private final TransactionRepository          txRepo;
     private final CashDispenser                  cashDispenser;
+    private final TransactionManager              transactionManager;
 
     private final EntityValidator<WithdrawalContext> validator = new EntityValidator<WithdrawalContext>()
             .addRule(new DenominationWithdrawalValidator())
@@ -45,13 +48,25 @@ public class WithdrawalServiceImpl implements WithdrawalService {
     public WithdrawalServiceImpl(AccountRepository accountRepo,
                                   TransactionRepository txRepo,
                                   CashDispenser cashDispenser) {
+        this(accountRepo, txRepo, cashDispenser, null);
+    }
+
+    public WithdrawalServiceImpl(AccountRepository accountRepo,
+                                 TransactionRepository txRepo,
+                                 CashDispenser cashDispenser,
+                                 TransactionManager transactionManager) {
         this.accountRepo   = accountRepo;
         this.txRepo        = txRepo;
         this.cashDispenser = cashDispenser;
+        this.transactionManager = transactionManager;
     }
 
     @Override
     public WithdrawalResult withdraw(Account account, long amount) {
+        return executeTransaction(() -> withdrawInternal(account, amount));
+    }
+
+    private WithdrawalResult withdrawInternal(Account account, long amount) {
         long dailyTotal = txRepo.sumByAccountNumberTypeAndDate(
                 account.getAccountNumber(), TransactionType.WITHDRAWAL, DateUtil.today());
         WithdrawalContext ctx = new WithdrawalContext(
@@ -73,5 +88,16 @@ public class WithdrawalServiceImpl implements WithdrawalService {
         txRepo.save(tx);
 
         return WithdrawalResult.success(tx, dispensed, cashDispenser.getAvailableCash());
+    }
+
+    private <T> T executeTransaction(Callable<T> action) {
+        if (transactionManager == null) {
+            try {
+                return action.call();
+            } catch (Exception e) {
+                throw new IllegalStateException("Withdrawal transaction failed", e);
+            }
+        }
+        return transactionManager.executeInTransaction(action);
     }
 }

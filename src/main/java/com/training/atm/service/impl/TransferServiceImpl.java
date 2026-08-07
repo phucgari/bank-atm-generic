@@ -15,6 +15,7 @@ import com.training.atm.validation.transfer.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 
 /**
  * Implements fund-transfer (FR-07) and scheduled-transfer processing (FR-10).
@@ -67,11 +68,15 @@ public class TransferServiceImpl implements TransferService {
         this.transactionManager = transactionManager;
     }
 
+    @Override
+    public TransferResult transfer(Account source, String destAccountNumber, long amount) {
+        return executeTransaction(() -> transferInternal(source, destAccountNumber, amount));
+    }
+
     // -----------------------------------------------------------------------
     // FR-07: Fund Transfer
     // -----------------------------------------------------------------------
-    @Override
-    public TransferResult transfer(Account source, String destAccountNumber, long amount) {
+    private TransferResult transferInternal(Account source, String destAccountNumber, long amount) {
         // Pre-fetch everything once — both validation chain and post-validation logic share it.
         Optional<Account> destOpt = accountRepo.findByAccountNumber(destAccountNumber);
         long todayTotal = txRepo.sumByAccountNumberTypeAndDate(
@@ -108,6 +113,17 @@ public class TransferServiceImpl implements TransferService {
         return TransferResult.success(txOut, destName);
     }
 
+    private <T> T executeTransaction(Callable<T> action) {
+        if (transactionManager == null) {
+            try {
+                return action.call();
+            } catch (Exception e) {
+                throw new IllegalStateException("Transfer transaction failed", e);
+            }
+        }
+        return transactionManager.executeInTransaction(action);
+    }
+
     // -----------------------------------------------------------------------
     // FR-10: Scheduled Transfer Processing
     // -----------------------------------------------------------------------
@@ -142,7 +158,7 @@ public class TransferServiceImpl implements TransferService {
             // Command pattern: wrap execution in a self-describing command.
             TransferCommand cmd = new TransferCommand(
                     srcOpt.get(), st.getDestAccount(), st.getAmount(), this);
-            TransferResult result = transactionManager.executeInTransaction(cmd);
+            TransferResult result = transfer(srcOpt.get(), st.getDestAccount(), st.getAmount());
 
             if (!result.isSuccess()) {
                 st.executeFail();   // State pattern
