@@ -9,18 +9,18 @@ import com.training.atm.repository.TransactionRepository;
 import com.training.atm.service.CashDispenser;
 import com.training.atm.service.DepositService;
 import com.training.atm.util.DateUtil;
-import com.training.atm.validation.TransactionValidator;
+import com.training.atm.validation.EntityValidator;
+import com.training.atm.validation.ValidationResult;
 import com.training.atm.validation.deposit.*;
 
-import java.util.Optional;
+import java.util.List;
 
 /**
  * Implements deposit business rules (FR-03).
  *
- * <h3>Chain of Responsibility</h3>
- * Validation is performed by a composable {@link TransactionValidator} chain
- * assembled once at construction time.  Each validator is responsible for a
- * single rule.
+ * <h3>Validation</h3>
+ * Validation is performed by an {@link EntityValidator} assembled once at
+ * construction time. Each rule is responsible for a single constraint.
  *
  * <h3>Design notes</h3>
  * SRP: only responsible for the deposit execution flow.<br>
@@ -31,10 +31,9 @@ public class DepositServiceImpl implements DepositService {
     private final TransactionRepository txRepo;
     private final CashDispenser         cashDispenser;
 
-    /** CoR chain assembled once — validators are stateless, so sharing is safe. */
-    private final TransactionValidator<DepositContext> validationChain =
-            new DenominationDepositValidator()
-            .then(new SingleDepositLimitValidator());
+    private final EntityValidator<DepositContext> validator = new EntityValidator<DepositContext>()
+            .addRule(new DenominationDepositValidator())
+            .addRule(new SingleDepositLimitValidator());
 
     public DepositServiceImpl(AccountRepository accountRepo,
                                TransactionRepository txRepo,
@@ -48,8 +47,8 @@ public class DepositServiceImpl implements DepositService {
     public DepositResult deposit(Account account, long amount) {
         DepositContext ctx = new DepositContext(account, amount);
 
-        Optional<String> error = validationChain.validate(ctx);
-        if (error.isPresent()) return DepositResult.failure(error.get());
+        List<ValidationResult> errors = validator.validate(ctx);
+        if (!errors.isEmpty()) return DepositResult.failure(errors.getFirst().getErrorMessage());
 
         long newBalance = account.getAccountBalance() + amount;
         account.updateBalance(newBalance);

@@ -1,15 +1,14 @@
 package com.training.atm.validation.transfer;
 
-import com.training.atm.validation.TransactionValidator;
-
-import java.util.Optional;
+import com.training.atm.validation.ValidationResult;
+import com.training.atm.validation.ValidationRule;
 
 /** Rule: transfer amount must be positive. */
-public class PositiveAmountTransferValidator implements TransactionValidator<TransferContext> {
+public class PositiveAmountTransferValidator implements ValidationRule<TransferContext> {
     @Override
-    public Optional<String> validate(TransferContext ctx) {
+    public ValidationResult validate(TransferContext ctx) {
         return ctx.amount() > 0
-                ? Optional.empty()
-                : Optional.of("Transfer amount must be positive.");
+                ? ValidationResult.valid()
+                : ValidationResult.invalid("Transfer amount must be positive.");
     }
 }

@@ -9,7 +9,8 @@ import com.training.atm.model.enums.TransferFrequency;
 import com.training.atm.repository.*;
 import com.training.atm.service.TransferService;
 import com.training.atm.util.DateUtil;
-import com.training.atm.validation.TransactionValidator;
+import com.training.atm.validation.EntityValidator;
+import com.training.atm.validation.ValidationResult;
 import com.training.atm.validation.transfer.*;
 
 import java.util.List;
@@ -18,12 +19,11 @@ import java.util.Optional;
 /**
  * Implements fund-transfer (FR-07) and scheduled-transfer processing (FR-10).
  *
- * <h3>Chain of Responsibility</h3>
- * All pre-transfer guards are delegated to a composable
- * {@link TransactionValidator} chain built once at construction time.  The
- * {@link TransferContext} record carries all pre-fetched data (including the
- * destination account) so validators and post-validation logic share the same
- * object — no second repository lookup is needed.
+ * <h3>Validation</h3>
+ * All pre-transfer guards are delegated to an {@link EntityValidator} built
+ * once at construction time. The {@link TransferContext} record carries all
+ * pre-fetched data (including the destination account) so validators and
+ * post-validation logic share the same object.
  *
  * <h3>Command pattern</h3>
  * {@code processScheduledTransfers()} wraps each execution in a
@@ -48,14 +48,13 @@ public class TransferServiceImpl implements TransferService {
     private final CustomerRepository          customerRepo;
     private final TransactionManager          transactionManager;
 
-    /** CoR chain assembled once — validators are stateless, so sharing is safe. */
-    private final TransactionValidator<TransferContext> validationChain =
-            new SameAccountTransferValidator()
-            .then(new PositiveAmountTransferValidator())
-            .then(new SingleTransferLimitValidator())
-            .then(new DestinationExistsValidator())
-            .then(new DailyTransferLimitValidator())
-            .then(new BalanceTransferValidator());
+    private final EntityValidator<TransferContext> validator = new EntityValidator<TransferContext>()
+            .addRule(new SameAccountTransferValidator())
+            .addRule(new PositiveAmountTransferValidator())
+            .addRule(new SingleTransferLimitValidator())
+            .addRule(new DestinationExistsValidator())
+            .addRule(new DailyTransferLimitValidator())
+            .addRule(new BalanceTransferValidator());
 
     public TransferServiceImpl(AccountRepository accountRepo,
                                TransactionRepository txRepo,
@@ -81,8 +80,8 @@ public class TransferServiceImpl implements TransferService {
         TransferContext ctx = new TransferContext(
                 source, destAccountNumber, destOpt.orElse(null), amount, todayTotal);
 
-        Optional<String> error = validationChain.validate(ctx);
-        if (error.isPresent()) return TransferResult.failure(error.get());
+        List<ValidationResult> errors = validator.validate(ctx);
+        if (!errors.isEmpty()) return TransferResult.failure(errors.getFirst().getErrorMessage());
 
         // destAccount is guaranteed non-null here (DestinationExistsValidator passed).
         Account dest = ctx.destAccount();

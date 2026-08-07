@@ -2,17 +2,16 @@ package com.training.atm.validation.deposit;
 
 import com.training.atm.config.TransactionLimits;
 import com.training.atm.util.FormatUtil;
-import com.training.atm.validation.TransactionValidator;
-
-import java.util.Optional;
+import com.training.atm.validation.ValidationResult;
+import com.training.atm.validation.ValidationRule;
 
 /** Rule: single deposit cannot exceed the per-transaction limit. */
-public class SingleDepositLimitValidator implements TransactionValidator<DepositContext> {
+public class SingleDepositLimitValidator implements ValidationRule<DepositContext> {
     @Override
-    public Optional<String> validate(DepositContext ctx) {
+    public ValidationResult validate(DepositContext ctx) {
         return ctx.amount() <= TransactionLimits.MAX_DEPOSIT_SINGLE
-                ? Optional.empty()
-                : Optional.of("Single deposit limit is "
+                ? ValidationResult.valid()
+                : ValidationResult.invalid("Single deposit limit is "
                         + FormatUtil.formatVND(TransactionLimits.MAX_DEPOSIT_SINGLE) + ".");
     }
 }

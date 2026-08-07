@@ -9,19 +9,19 @@ import com.training.atm.repository.TransactionRepository;
 import com.training.atm.service.CashDispenser;
 import com.training.atm.service.WithdrawalService;
 import com.training.atm.util.DateUtil;
-import com.training.atm.validation.TransactionValidator;
+import com.training.atm.validation.EntityValidator;
+import com.training.atm.validation.ValidationResult;
 import com.training.atm.validation.withdrawal.*;
 
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Implements withdrawal business rules (FR-02).
  *
- * <h3>Chain of Responsibility</h3>
- * Validation is performed by a composable {@link TransactionValidator} chain
- * assembled once at construction time.  Each validator is responsible for a
- * single rule.  Adding or reordering rules requires zero changes to this class.
+ * <h3>Validation</h3>
+ * Validation is performed by an {@link EntityValidator} assembled once at
+ * construction time. Each rule is responsible for a single constraint.
  *
  * <h3>Design notes</h3>
  * SRP: only responsible for the withdrawal execution flow.<br>
@@ -34,13 +34,12 @@ public class WithdrawalServiceImpl implements WithdrawalService {
     private final TransactionRepository          txRepo;
     private final CashDispenser                  cashDispenser;
 
-    /** CoR chain assembled once — validators are stateless, so sharing is safe. */
-    private final TransactionValidator<WithdrawalContext> validationChain =
-            new DenominationWithdrawalValidator()
-            .then(new SingleWithdrawalLimitValidator())
-            .then(new DailyWithdrawalLimitValidator())
-            .then(new AccountBalanceValidator())
-            .then(new AtmCashValidator());
+    private final EntityValidator<WithdrawalContext> validator = new EntityValidator<WithdrawalContext>()
+            .addRule(new DenominationWithdrawalValidator())
+            .addRule(new SingleWithdrawalLimitValidator())
+            .addRule(new DailyWithdrawalLimitValidator())
+            .addRule(new AccountBalanceValidator())
+            .addRule(new AtmCashValidator());
 
     public WithdrawalServiceImpl(AccountRepository accountRepo,
                                   TransactionRepository txRepo,
@@ -57,8 +56,8 @@ public class WithdrawalServiceImpl implements WithdrawalService {
         WithdrawalContext ctx = new WithdrawalContext(
                 account, amount, dailyTotal, cashDispenser.getAvailableCash());
 
-        Optional<String> error = validationChain.validate(ctx);
-        if (error.isPresent()) return WithdrawalResult.failure(error.get());
+        List<ValidationResult> errors = validator.validate(ctx);
+        if (!errors.isEmpty()) return WithdrawalResult.failure(errors.getFirst().getErrorMessage());
 
         Map<Long, Integer> dispensed = cashDispenser.dispenseCash(amount);
         if (dispensed == null)

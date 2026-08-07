@@ -2,17 +2,16 @@ package com.training.atm.validation.withdrawal;
 
 import com.training.atm.config.TransactionLimits;
 import com.training.atm.util.FormatUtil;
-import com.training.atm.validation.TransactionValidator;
-
-import java.util.Optional;
+import com.training.atm.validation.ValidationResult;
+import com.training.atm.validation.ValidationRule;
 
 /** Rule: single withdrawal cannot exceed the per-transaction limit. */
-public class SingleWithdrawalLimitValidator implements TransactionValidator<WithdrawalContext> {
+public class SingleWithdrawalLimitValidator implements ValidationRule<WithdrawalContext> {
     @Override
-    public Optional<String> validate(WithdrawalContext ctx) {
+    public ValidationResult validate(WithdrawalContext ctx) {
         return ctx.amount() <= TransactionLimits.MAX_WITHDRAWAL_SINGLE
-                ? Optional.empty()
-                : Optional.of("Single withdrawal limit is "
+                ? ValidationResult.valid()
+                : ValidationResult.invalid("Single withdrawal limit is "
                         + FormatUtil.formatVND(TransactionLimits.MAX_WITHDRAWAL_SINGLE) + ".");
     }
 }

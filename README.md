@@ -96,11 +96,13 @@ com.training.atm
 │   ├── WithdrawCommand.java
 │   ├── DepositCommand.java
 │   └── TransferCommand.java
-├── validation/                      — Chain of Responsibility pattern
-│   ├── TransactionValidator.java    — @FunctionalInterface with .then() composition
-│   ├── withdrawal/                  — WithdrawalContext + 5 validator links
-│   ├── deposit/                     — DepositContext + 2 validator links
-│   └── transfer/                    — TransferContext + 6 validator links
+├── validation/                      — Generic entity validation
+│   ├── ValidationRule.java          — @FunctionalInterface for one rule
+│   ├── ValidationResult.java        — Validation outcome and error message
+│   ├── EntityValidator.java         — Generic rule collection and runner
+│   ├── withdrawal/                  — WithdrawalContext + 5 validation rules
+│   ├── deposit/                     — DepositContext + 2 validation rules
+│   └── transfer/                    — TransferContext + 6 validation rules
 ├── repository/                      — Repository interfaces (DIP)
 │   └── file/                        — Text-file implementations
 ├── service/
@@ -109,9 +111,9 @@ com.training.atm
 │   ├── WithdrawalService.java / DepositService.java
 │   ├── TransferService.java / InterestService.java
 │   └── impl/
-│       ├── WithdrawalServiceImpl.java  — CoR validation chain + withdrawal logic
-│       ├── DepositServiceImpl.java     — CoR validation chain + deposit logic
-│       ├── TransferServiceImpl.java    — CoR validation chain + Command scheduler
+│       ├── WithdrawalServiceImpl.java  — Generic validation + withdrawal logic
+│       ├── DepositServiceImpl.java     — Generic validation + deposit logic
+│       ├── TransferServiceImpl.java    — Generic validation + Command scheduler
 │       └── InterestServiceImpl.java
 ├── session/
 │   ├── CustomerSessionDeps.java     — Parameter-object record for CustomerSession
@@ -290,7 +292,7 @@ System.out.println("[SCHEDULER] " + cmd.describe() + " → OK");
 
 ---
 
-### 4. Chain of Responsibility — Transaction Validation (FR-02, FR-03, FR-07)
+### 4. Generic Entity Validation (FR-02, FR-03, FR-07)
 
 #### Problem
 Each service implementation contained a long sequence of `if (!condition) return failure(message)` guard clauses before the actual business logic. These sequences:
@@ -299,11 +301,13 @@ Each service implementation contained a long sequence of `if (!condition) return
 - Required modifying the service method body to add, remove, or reorder a rule
 
 #### Solution
-Extract each rule into a single-responsibility `TransactionValidator<T>` — a `@FunctionalInterface` that returns `Optional<String>` (empty = pass, present = error message). Validators are composed into a chain using the `then()` default method. The chain is assembled **once** at field initialisation and is shared across all calls (validators are stateless). A `Context` record carries all pre-fetched data so no validator needs to call a repository itself.
+Extract each rule into a single-responsibility `ValidationRule<T>` — a `@FunctionalInterface` that returns a `ValidationResult`. Rules are registered with a generic `EntityValidator<T>`, which evaluates every rule and returns all failures. The validator is assembled **once** at field initialisation and is shared across all calls because rules are stateless. A `Context` record carries all pre-fetched data so no rule needs to call a repository itself.
 
 ```
 validation/
-├── TransactionValidator.java              ← @FunctionalInterface + default then()
+├── ValidationRule.java                    ← @FunctionalInterface for one rule
+├── ValidationResult.java                  ← valid/invalid result and message
+├── EntityValidator.java                   ← generic rule collection and runner
 ├── withdrawal/
 │   ├── WithdrawalContext.java             ← record(account, amount, dailyTotal, atmAvailableCash)
 │   ├── DenominationWithdrawalValidator    ← amount is a positive multiple of 50,000 VND
@@ -328,34 +332,28 @@ validation/
 #### How it works
 
 ```java
-// TransactionValidator.java — the whole pattern in one interface
+// ValidationRule.java — one reusable validation rule
 @FunctionalInterface
-public interface TransactionValidator<T> {
-    Optional<String> validate(T context);
-
-    default TransactionValidator<T> then(TransactionValidator<T> next) {
-        return ctx -> {
-            Optional<String> result = this.validate(ctx);
-            return result.isPresent() ? result : next.validate(ctx);  // short-circuit
-        };
-    }
+public interface ValidationRule<T> {
+    ValidationResult validate(T entity);
 }
 
-// WithdrawalServiceImpl.java — chain assembled once at class level
-private final TransactionValidator<WithdrawalContext> validationChain =
-    new DenominationWithdrawalValidator()
-    .then(new SingleWithdrawalLimitValidator())
-    .then(new DailyWithdrawalLimitValidator())
-    .then(new AccountBalanceValidator())
-    .then(new AtmCashValidator());
+// WithdrawalServiceImpl.java — rules assembled once at class level
+private final EntityValidator<WithdrawalContext> validator =
+    new EntityValidator<WithdrawalContext>()
+    .addRule(new DenominationWithdrawalValidator())
+    .addRule(new SingleWithdrawalLimitValidator())
+    .addRule(new DailyWithdrawalLimitValidator())
+    .addRule(new AccountBalanceValidator())
+    .addRule(new AtmCashValidator());
 
-// withdraw() — build context, run chain, proceed on pass
+// withdraw() — build context, run rules, proceed on pass
 public WithdrawalResult withdraw(Account account, long amount) {
     long dailyTotal = txRepo.sumByAccountNumberTypeAndDate(...);
     WithdrawalContext ctx = new WithdrawalContext(account, amount, dailyTotal, cashDispenser.getAvailableCash());
 
-    Optional<String> error = validationChain.validate(ctx);
-    if (error.isPresent()) return WithdrawalResult.failure(error.get());
+    List<ValidationResult> errors = validator.validate(ctx);
+    if (!errors.isEmpty()) return WithdrawalResult.failure(errors.get(0).getErrorMessage());
 
     // ... dispense cash, update balance, persist transaction
 }
@@ -363,7 +361,7 @@ public WithdrawalResult withdraw(Account account, long amount) {
 
 The transfer chain demonstrates a further benefit: `DestinationExistsValidator` checks `ctx.destAccount() != null`, and because the destination account was pre-fetched into the context, the validated post-validation code can use `ctx.destAccount()` directly — **no second repository lookup**.
 
-**Benefit:** To add a "maximum single deposit ≤ 200,000,000 VND" rule, create one new validator class and insert it into the chain with `.then()`. The service method body and all other validators remain untouched.
+**Benefit:** To add a "maximum single deposit ≤ 200,000,000 VND" rule, create one new rule class and register it with `.addRule()`. The service method body and all other rules remain untouched. Unlike the previous short-circuit chain, the generic validator can collect multiple failures; services currently preserve the existing user experience by reporting the first failure.
 
 ---
 
