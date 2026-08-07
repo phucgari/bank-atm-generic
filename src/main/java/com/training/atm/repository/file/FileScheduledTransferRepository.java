@@ -4,7 +4,6 @@ import com.training.atm.model.ScheduledTransfer;
 import com.training.atm.model.enums.TransferFrequency;
 import com.training.atm.model.enums.TransferStatus;
 import com.training.atm.model.state.TransferLifecycleState;
-import com.training.atm.repository.DataDirectory;
 import com.training.atm.repository.ScheduledTransferRepository;
 
 import java.io.*;

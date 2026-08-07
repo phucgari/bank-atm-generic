@@ -1,7 +1,6 @@
 package com.training.atm.repository.file;
 
 import com.training.atm.repository.AdminLogRepository;
-import com.training.atm.repository.DataDirectory;
 
 import java.io.*;
 

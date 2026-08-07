@@ -1,8 +1,8 @@
 package com.training.atm;
 
-import com.training.atm.config.db.*;
 import com.training.atm.repository.*;
-import com.training.atm.repository.db.*;
+import com.training.atm.repository.file.DataDirectory;
+import com.training.atm.config.db.TransactionManager;
 import com.training.atm.service.*;
 import com.training.atm.service.impl.DepositServiceImpl;
 import com.training.atm.service.impl.InterestServiceImpl;
@@ -22,26 +22,21 @@ public class App {
     public static void main(String[] args) {
         DataDirectory.ensureExists();
 
-        DatabaseConfig databaseConfig = new DatabaseConfig();
-        ConnectionPool connectionPool = new JdbcConnectionPool(databaseConfig);
-        ConnectionManager pooledConnectionManager = new PooledConnectionManager(connectionPool);
-        TransactionContext transactionContext = new TransactionContext();
-        ConnectionManager connectionManager = new TxAwareConnectionManager(pooledConnectionManager, transactionContext);
-        TransactionManager transactionManager = new JdbcTransactionManager(pooledConnectionManager, transactionContext);
-        new DatabaseInitializer(connectionManager).initialize();
-        // --- Concrete repository implementations ---
-        ATMInfoRepository     atmConfig    = new JdbcATMConfigRepository(connectionManager);  // ATMInfoRepository + DenominationRepository
-        CustomerRepository      customerRepo = new JdbcCustomerRepository(connectionManager);
-        CardRepository          cardRepo     = new JdbcCardRepository(connectionManager);
-        AccountRepository       accountRepo  = new JdbcAccountRepository(connectionManager);
-        TransactionRepository   txRepo       = new JdbcTransactionRepository(connectionManager);
-        ScheduledTransferRepository schedRepo = new JdbcScheduledTransferRepository(connectionManager);
-        AdminLogRepository      adminLog     = new JdbcAdminLogRepository(connectionManager);
+        RepositoryContext repositories = RepositoryFactory.create();
+        ATMInfoRepository atmConfig = repositories.atmInfo();
+        DenominationRepository denominationRepo = repositories.denominations();
+        CustomerRepository customerRepo = repositories.customers();
+        CardRepository cardRepo = repositories.cards();
+        AccountRepository accountRepo = repositories.accounts();
+        TransactionRepository txRepo = repositories.transactions();
+        ScheduledTransferRepository schedRepo = repositories.scheduledTransfers();
+        AdminLogRepository adminLog = repositories.adminLogs();
+        TransactionManager transactionManager = repositories.transactionManager();
 
         // --- Hardware simulation layer ---
         DisplayScreen  screen         = new DisplayScreen();
         ReceiptPrinter receiptPrinter = new ReceiptPrinter(screen);
-        CashDispenser  cashDispenser  = new CashDispenser((DenominationRepository) atmConfig);
+        CashDispenser  cashDispenser  = new CashDispenser(denominationRepo);
         CardScanner    cardScanner    = new CardScanner(cardRepo, screen);
         ATM            atm            = new ATM(atmConfig);
 
@@ -62,7 +57,7 @@ public class App {
                 accountRepo, txRepo, customerRepo, cardRepo, schedRepo, atmConfig, transactionManager));
 
         AdminSession adminSession = new AdminSession(new AdminSessionDeps(
-                screen, interestService, atmConfig, (DenominationRepository) atmConfig,
+                screen, interestService, atmConfig, denominationRepo,
                 accountRepo, customerRepo, cardRepo, adminLog));
 
         // --- Main ATM loop ---

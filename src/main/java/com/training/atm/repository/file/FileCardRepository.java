@@ -3,7 +3,6 @@ package com.training.atm.repository.file;
 import com.training.atm.model.ATMCard;
 import com.training.atm.model.enums.CardStatus;
 import com.training.atm.repository.CardRepository;
-import com.training.atm.repository.DataDirectory;
 
 import java.io.*;
 import java.util.*;

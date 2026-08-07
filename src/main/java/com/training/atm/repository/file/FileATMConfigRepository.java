@@ -2,7 +2,6 @@ package com.training.atm.repository.file;
 
 import com.training.atm.config.TransactionLimits;
 import com.training.atm.repository.ATMInfoRepository;
-import com.training.atm.repository.DataDirectory;
 import com.training.atm.repository.DenominationRepository;
 
 import java.io.*;

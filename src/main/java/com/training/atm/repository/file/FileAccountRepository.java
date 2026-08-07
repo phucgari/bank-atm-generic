@@ -7,7 +7,6 @@ import com.training.atm.model.enums.AccountType;
 import com.training.atm.model.strategy.CompoundInterestStrategy;
 import com.training.atm.model.strategy.ZeroOnNegativeInterestStrategy;
 import com.training.atm.repository.AccountRepository;
-import com.training.atm.repository.DataDirectory;
 
 import java.io.*;
 import java.util.*;

@@ -1,0 +1,4 @@
+# timestamp|adminUser|action
+2026-06-07 21:57:52|admin|Admin login
+2026-06-07 21:57:52|admin|Viewed all accounts
+2026-06-07 21:57:52|admin|Admin logout

@@ -17,7 +17,8 @@ mvn package
 ```bash
 java -jar target/bank-atm-simulation.jar
 ```
-The application reads/writes data files from a `./data/` directory relative to where the command is run. Run from the project root so it finds the pre-seeded `data/` folder.
+The application reads/writes file-backed data from the configured
+external `./data/` directory.
 
 ## Pre-seeded Sample Data
 
@@ -47,7 +48,7 @@ The application reads/writes data files from a `./data/` directory relative to w
 ## Technology Choices
 
 - **Language:** Java 17 (Core only — `java.util`, `java.io`, `java.text`, `java.time`)
-- **Storage:** Plain text files (pipe-delimited, `./data/` directory)
+- **Storage:** Switchable external plain text files or MySQL via `storage.mode`
 - **Build tool:** Apache Maven
 
 ### Data Files
@@ -62,6 +63,33 @@ The application reads/writes data files from a `./data/` directory relative to w
 | `data/transactions.txt` | All transaction records (append-only) |
 | `data/scheduled_transfers.txt` | Scheduled & recurring transfers |
 | `data/admin_log.txt` | Admin audit log (append-only) |
+
+### Storage Configuration
+
+The application uses one `application.properties` file per source set.
+Production uses the `prod` profile:
+
+```properties
+profile=prod
+```
+
+Tests use `src/test/resources/application.properties` with `profile=test` and
+isolated file storage.
+
+Set `storage.mode=file` in a profile to use the repositories backed by the files in
+`./data/`. The location is configurable with
+`file.data-directory`. Tests use `storage.mode=file` through the `test`
+profile, so repository-factory tests do not require MySQL.
+The profile and database settings can be overridden with system properties,
+which take precedence over the file:
+
+```bash
+java -Dprofile=prod \
+     -Ddatabase.url=jdbc:mysql://db-host:3306/appdb \
+     -Ddatabase.user=appuser \
+     -Ddatabase.password=apppass \
+     -jar target/bank-atm-simulation.jar
+```
 
 ## Architecture
 

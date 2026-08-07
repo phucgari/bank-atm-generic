@@ -2,7 +2,6 @@ package com.training.atm.repository.file;
 
 import com.training.atm.model.BankCustomer;
 import com.training.atm.repository.CustomerRepository;
-import com.training.atm.repository.DataDirectory;
 
 import java.io.*;
 import java.util.*;

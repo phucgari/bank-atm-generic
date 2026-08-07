@@ -2,7 +2,6 @@ package com.training.atm.repository.file;
 
 import com.training.atm.model.Transaction;
 import com.training.atm.model.enums.TransactionType;
-import com.training.atm.repository.DataDirectory;
 import com.training.atm.repository.TransactionRepository;
 
 import java.io.*;

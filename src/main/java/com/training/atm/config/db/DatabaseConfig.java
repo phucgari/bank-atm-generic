@@ -1,13 +1,12 @@
 package com.training.atm.config.db;
 
-import com.training.atm.repository.DataDirectory;
+import com.training.atm.config.ApplicationProperties;
 
 /**
  * database configuration running
  * ({@code MODE=MySQL} in the JDBC URL).
  *
- * <p>The database file lives in the same {@code data/} directory as the
- * application's text files. MySQL-mode settings used:
+ * <p>MySQL-mode settings used:
  * <ul>
  *   <li>{@code DATABASE_TO_LOWER=TRUE} — MySQL lowers unquoted identifiers.</li>
  *   <li>{@code CASE_INSENSITIVE_IDENTIFIERS=TRUE} — case-insensitive object names.</li>
@@ -19,11 +18,6 @@ public class DatabaseConfig {
     private static final String DEFAULT_USER = "appuser";
     private static final String DEFAULT_PASSWORD = "apppass";
     private static final int DEFAULT_POOL_SIZE = 3;
-    /**
-     * Relative path to the database file inside {@code data/}. The explicit
-     * {@code ./} prefix is required by H2 2.x for paths relative to the CWD.
-     */
-
     private static final String DEFAULT_URL ="jdbc:mysql://localhost:3306/appdb";
 
     protected String user;
@@ -32,10 +26,12 @@ public class DatabaseConfig {
     protected int poolSize;
 
     public DatabaseConfig() {
-        this.user = DEFAULT_USER;
-        this.password = DEFAULT_PASSWORD;
-        this.url = DEFAULT_URL;
-        this.poolSize = DEFAULT_POOL_SIZE;
+        ApplicationProperties properties = new ApplicationProperties();
+        this.user = properties.get("database.user", DEFAULT_USER);
+        this.password = properties.get("database.password", DEFAULT_PASSWORD);
+        this.url = properties.get("database.url", DEFAULT_URL);
+        this.poolSize = parsePoolSize(properties.get(
+                "database.pool-size", String.valueOf(DEFAULT_POOL_SIZE)));
     }
 
     public DatabaseConfig(String user, String password, String url, int poolSize) {
@@ -82,5 +78,17 @@ public class DatabaseConfig {
 
     public void setPoolSize(int poolSize) {
         this.poolSize = poolSize;
+    }
+
+    private static int parsePoolSize(String value) {
+        try {
+            int parsed = Integer.parseInt(value);
+            if (parsed <= 0) {
+                throw new IllegalArgumentException("database.pool-size must be positive");
+            }
+            return parsed;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("database.pool-size must be an integer", e);
+        }
     }
 }
