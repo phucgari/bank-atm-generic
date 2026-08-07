@@ -1,0 +1,90 @@
+@startuml
+hide circle
+skinparam classAttributeIconSize 0
+
+class Account {
+  +account_id: VARCHAR(30) <<PK>>
+  +account_number: VARCHAR(20) <<UNIQUE>>
+  +balance: DECIMAL(15,2)
+  +interest_rate: DECIMAL(5,2)
+  +account_type: VARCHAR(20)  ' SAVINGS | CURRENT
+  +min_balance: DECIMAL(15,2)
+  +overdraft_limit: DECIMAL(15,2)
+  +created_at: TIMESTAMP
+}
+
+class AtmCard {
+  +card_id: VARCHAR(30) <<PK>>
+  +pin_hash: CHAR(64)
+  +status: VARCHAR(20)        ' ACTIVE | BLOCKED
+  +failed_attempts: INT
+  +linked_account_id: VARCHAR(30) <<FK, UNIQUE>>
+}
+
+class Customer {
+  +customer_id: VARCHAR(30) <<PK>>
+  +name: VARCHAR(100)
+  +address: VARCHAR(255)
+  +email: VARCHAR(100) <<UNIQUE>>
+  +card_id: VARCHAR(30) <<FK, UNIQUE>>
+  +account_id: VARCHAR(30) <<FK, UNIQUE>>
+}
+
+class Transaction {
+  +transaction_id: VARCHAR(40) <<PK>>
+  +account_id: VARCHAR(30) <<FK>>
+  +type: VARCHAR(20)     ' DEPOSIT | WITHDRAWAL | TRANSFER_IN | TRANSFER_OUT | INTEREST
+  +amount: DECIMAL(15,2)
+  +balance_after: DECIMAL(15,2)
+  +created_at: TIMESTAMP
+}
+
+class ScheduledTransfer {
+  +transfer_id: VARCHAR(40) <<PK>>
+  +source_account_id: VARCHAR(30) <<FK>>
+  +dest_account_id: VARCHAR(30) <<FK>>
+  +amount: DECIMAL(15,2)
+  +frequency: VARCHAR(20)   ' DAILY | WEEKLY | MONTHLY
+  +next_execution: TIMESTAMP
+  +status: VARCHAR(20)      ' ACTIVE | PAUSED | COMPLETED | FAILED
+  +max_repeats: INT
+  +executed_count: INT
+}
+
+class AtmMachine {
+  +atm_id: VARCHAR(30) <<PK>>
+  +location: VARCHAR(255)
+  +branch_name: VARCHAR(100)
+  +total_cash: BIGINT
+  +denomination_500k: INT
+  +denomination_200k: INT
+  +denomination_100k: INT
+  +denomination_50k: INT
+}
+
+class AdminAuditLog {
+  +log_id: BIGINT <<PK>>
+  +admin_username: VARCHAR(100)
+  +action: VARCHAR(255)
+  +details: VARCHAR(1000)
+  +created_at: TIMESTAMP
+}
+
+' ---------------- Associations (multiplicity) ----------------
+
+' accounts <-> atm_cards is 1..1 (linked_account_id is UNIQUE + NOT NULL)
+Account "1" -- "1" AtmCard : linked_account
+
+' customers optionally reference one card/account; each card/account can be linked to at most one customer (UNIQUE)
+AtmCard  "0..1" -- "0..1" Customer : card_holder
+Account  "0..1" -- "0..1" Customer : owner_account
+
+' transactions: each transaction belongs to exactly 1 account; an account has 0..* transactions
+Account "1" -- "0..*" Transaction : posts
+
+' scheduled transfers: each transfer has exactly one source and one destination account;
+' an account can be source/destination for 0..* scheduled transfers
+Account "1" -- "0..*" ScheduledTransfer : source
+Account "1" -- "0..*" ScheduledTransfer : destination
+
+@enduml
