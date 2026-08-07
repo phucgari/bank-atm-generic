@@ -27,6 +27,11 @@ public class JdbcCustomerRepository extends AbstractJdbcRepository<BankCustomer,
     }
 
     @Override
+    public Optional<BankCustomer> findById(String customerId) {
+        return querySingle(SELECT_ALL + " WHERE c.customer_id = ?", customerId);
+    }
+
+    @Override
     public Optional<BankCustomer> findByCardId(String cardId) {
         return querySingle(SELECT_ALL + " WHERE c.card_id = ?", cardId);
     }
