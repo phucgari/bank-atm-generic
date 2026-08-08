@@ -111,21 +111,14 @@ public class JdbcATMConfigRepository extends AbstractJdbcRepository<ATMConfig, I
 
     @Override
     public void dispenseBills(Map<Long, Integer> dispensed) {
-        Connection conn = null;
-        try {
-            conn = connectionManager.getConnection();
-            conn.setAutoCommit(false);
+        try (Connection conn = connectionManager.getConnection()) {
             long atmId = ensureAtmMachine(conn);
             for (Map.Entry<Long, Integer> entry : dispensed.entrySet()) {
                 adjustDenomination(conn, atmId, entry.getKey(), -entry.getValue());
             }
             updateTotalCash(conn, atmId);
-            conn.commit();
         } catch (SQLException e) {
-            rollback(conn);
             throw new RuntimeException("Error dispensing bills from database", e);
-        } finally {
-            closeQuietly(conn);
         }
     }
 
@@ -188,27 +181,6 @@ public class JdbcATMConfigRepository extends AbstractJdbcRepository<ATMConfig, I
         try (PreparedStatement ps = conn.prepareStatement("UPDATE atm_machines SET total_cash = (denomination_500k * 500000 + denomination_200k * 200000 + denomination_100k * 100000 + denomination_50k * 50000) WHERE atm_id = ?")) {
             ps.setString(1, "1");
             ps.executeUpdate();
-        }
-    }
-
-    private void rollback(Connection conn) {
-        if (conn != null) {
-            try {
-                conn.rollback();
-            } catch (SQLException e) {
-                System.err.println("Error rolling back denomination update: " + e.getMessage());
-            }
-        }
-    }
-
-    private void closeQuietly(Connection conn) {
-        if (conn != null) {
-            try {
-                conn.setAutoCommit(true);
-                conn.close();
-            } catch (SQLException e) {
-                System.err.println("Error closing connection: " + e.getMessage());
-            }
         }
     }
 

@@ -1,9 +1,11 @@
 package com.training.atm.service;
 
+import com.training.atm.config.db.TransactionManager;
 import com.training.atm.repository.DenominationRepository;
 import com.training.atm.util.DenominationDispenser;
 
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 /**
  * Manages ATM cash operations: dispensing bills for withdrawals and
@@ -15,9 +17,15 @@ import java.util.Map;
  */
 public class CashDispenser {
     private final DenominationRepository denomRepo;
+    private final TransactionManager transactionManager;
 
     public CashDispenser(DenominationRepository denomRepo) {
+        this(denomRepo, null);
+    }
+
+    public CashDispenser(DenominationRepository denomRepo, TransactionManager transactionManager) {
         this.denomRepo = denomRepo;
+        this.transactionManager = transactionManager;
     }
 
     public long getAvailableCash() {
@@ -33,6 +41,10 @@ public class CashDispenser {
      * Returns the bill breakdown on success, or {@code null} if impossible.
      */
     public Map<Long, Integer> dispenseCash(long amount) {
+        return executeTransaction(() -> dispenseCashInternal(amount));
+    }
+
+    private Map<Long, Integer> dispenseCashInternal(long amount) {
         Map<Long, Integer> available = denomRepo.getDenominations();
         Map<Long, Integer> dispensed = DenominationDispenser.calculate(amount, available);
         if (dispensed == null) return null;
@@ -42,6 +54,20 @@ public class CashDispenser {
 
     /** Accepts deposited cash and increases the ATM's available funds. */
     public void acceptAmount(long amount) {
-        denomRepo.addDepositCash(amount);
+        executeTransaction(() -> {
+            denomRepo.addDepositCash(amount);
+            return null;
+        });
+    }
+
+    private <T> T executeTransaction(Callable<T> action) {
+        if (transactionManager == null) {
+            try {
+                return action.call();
+            } catch (Exception e) {
+                throw new IllegalStateException("Cash transaction failed", e);
+            }
+        }
+        return transactionManager.executeInTransaction(action);
     }
 }

@@ -36,7 +36,7 @@ public class App {
         // --- Hardware simulation layer ---
         DisplayScreen  screen         = new DisplayScreen();
         ReceiptPrinter receiptPrinter = new ReceiptPrinter(screen);
-        CashDispenser  cashDispenser  = new CashDispenser(denominationRepo);
+        CashDispenser  cashDispenser  = new CashDispenser(denominationRepo, transactionManager);
         CardScanner    cardScanner    = new CardScanner(cardRepo, screen);
         ATM            atm            = new ATM(atmConfig);
 

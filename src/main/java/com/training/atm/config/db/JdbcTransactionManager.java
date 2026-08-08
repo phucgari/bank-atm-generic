@@ -17,7 +17,11 @@ public class JdbcTransactionManager implements TransactionManager {
     @Override
     public <T> T executeInTransaction(Callable<T> cb) {
         if (txContext.isActive()) {
-            throw new IllegalStateException("Nested transactions not supported.");
+            try {
+                return cb.call();
+            } catch (Exception e) {
+                throw new RuntimeException("Nested transaction operation failed", e);
+            }
         }
 
         try (Connection con = connectionManager.getConnection()) {
