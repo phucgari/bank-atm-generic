@@ -73,7 +73,8 @@ public class WithdrawalServiceImpl implements WithdrawalService {
                 account, amount, dailyTotal, cashDispenser.getAvailableCash());
 
         List<ValidationResult> errors = validator.validate(ctx);
-        if (!errors.isEmpty()) return WithdrawalResult.failure(errors.getFirst().getErrorCode());
+        if (!errors.isEmpty()) return WithdrawalResult.failure(
+                errors.getFirst().getErrorCode(), errors.getFirst().getErrorMessage());
 
         Map<Long, Integer> dispensed = cashDispenser.dispenseCash(amount);
         if (dispensed == null)

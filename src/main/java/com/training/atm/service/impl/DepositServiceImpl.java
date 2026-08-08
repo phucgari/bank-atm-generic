@@ -63,7 +63,8 @@ public class DepositServiceImpl implements DepositService {
         DepositContext ctx = new DepositContext(account, amount);
 
         List<ValidationResult> errors = validator.validate(ctx);
-        if (!errors.isEmpty()) return DepositResult.failure(errors.getFirst().getErrorCode());
+        if (!errors.isEmpty()) return DepositResult.failure(
+                errors.getFirst().getErrorCode(), errors.getFirst().getErrorMessage());
 
         long newBalance = account.getAccountBalance() + amount;
         account.updateBalance(newBalance);

@@ -23,6 +23,10 @@ public final class TransferResult extends ServiceResult<Transaction> implements 
         return new TransferResult(false, errorCode.format(), null, null, errorCode);
     }
 
+    public static TransferResult failure(ErrorCode errorCode, String message) {
+        return new TransferResult(false, message, null, null, errorCode);
+    }
+
     public Transaction getTransaction() {
         return getData();
     }

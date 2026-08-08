@@ -29,6 +29,10 @@ public final class WithdrawalResult extends ServiceResult<Transaction> implement
         return new WithdrawalResult(false, errorCode.format(), null, null, 0, errorCode);
     }
 
+    public static WithdrawalResult failure(ErrorCode errorCode, String message) {
+        return new WithdrawalResult(false, message, null, null, 0, errorCode);
+    }
+
     public Transaction getTransaction() {
         return getData();
     }
