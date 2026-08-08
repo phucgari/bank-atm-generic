@@ -109,11 +109,14 @@ public class JdbcAccountRepository extends AbstractJdbcRepository<Account,String
         long balance = rs.getBigDecimal("balance").longValueExact();
         String lastInterestYearMonth = "";
         AccountType type = AccountType.valueOf(rs.getString("account_type"));
+        double interestRate = rs.getBigDecimal("interest_rate").doubleValue();
+        long minimumBalance = rs.getBigDecimal("min_balance").longValueExact();
+        long overdraftLimit = rs.getBigDecimal("overdraft_limit").longValueExact();
         return switch (type) {
             case SAVINGS -> new SavingsAccount(accountNumber, balance, lastInterestYearMonth,
-                    new CompoundInterestStrategy(SavingsAccount.MONTHLY_RATE));
+                    new CompoundInterestStrategy(interestRate), minimumBalance);
             case CURRENT -> new CurrentAccount(accountNumber, balance, lastInterestYearMonth,
-                    new ZeroOnNegativeInterestStrategy(CurrentAccount.MONTHLY_RATE));
+                    new ZeroOnNegativeInterestStrategy(interestRate), -overdraftLimit);
         };
     }
 
@@ -122,10 +125,15 @@ public class JdbcAccountRepository extends AbstractJdbcRepository<Account,String
         ps.setString(1, entity.getAccountNumber());
         ps.setString(2, entity.getAccountNumber());
         ps.setBigDecimal(3, BigDecimal.valueOf(entity.getAccountBalance()));
-        ps.setBigDecimal(4, BigDecimal.ZERO);
+        ps.setBigDecimal(4, BigDecimal.valueOf(entity.getInterestRate()));
         ps.setString(5, entity.getAccountType().name());
-        ps.setBigDecimal(6, BigDecimal.ZERO);
-        ps.setBigDecimal(7, BigDecimal.ZERO);
+        if (entity instanceof SavingsAccount) {
+            ps.setBigDecimal(6, BigDecimal.valueOf(entity.getWithdrawalFloor()));
+            ps.setBigDecimal(7, BigDecimal.ZERO);
+        } else {
+            ps.setBigDecimal(6, BigDecimal.ZERO);
+            ps.setBigDecimal(7, BigDecimal.valueOf(-entity.getWithdrawalFloor()));
+        }
     }
 
     @Override

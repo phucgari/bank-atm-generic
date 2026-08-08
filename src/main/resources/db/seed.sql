@@ -7,10 +7,10 @@
 
 -- -------- accounts -----------------------------------------------------------
 -- accounts.txt: accountNumber|type|balance|lastInterestYearMonth
-INSERT INTO accounts (account_id, account_number, account_type, balance, interest_rate) VALUES
-('ACC001', 'ACC001', 'SAVINGS', 13000000.00, 0.48),
-('ACC002', 'ACC002', 'SAVINGS',  8500000.00, 0.48),
-('ACC003', 'ACC003', 'CURRENT', 22000000.00, 0.00);
+INSERT INTO accounts (account_id, account_number, account_type, balance, interest_rate, min_balance, overdraft_limit) VALUES
+('ACC001', 'ACC001', 'SAVINGS', 13000000.00, 0.48, 50000.00, 0.00),
+('ACC002', 'ACC002', 'SAVINGS',  8500000.00, 0.48, 50000.00, 0.00),
+('ACC003', 'ACC003', 'CURRENT', 22000000.00, 0.00,     0.00, 1000000.00);
 
 -- -------- atm_cards ----------------------------------------------------------
 -- cards.txt: cardId|pin|accountNumber|status|failedAttempts

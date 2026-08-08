@@ -8,6 +8,7 @@ import com.training.atm.util.FormatUtil;
 public class CurrentAccount extends Account {
     public static final double MONTHLY_RATE    = 0.001;         // 0.1 % per month
     public static final long   OVERDRAFT_LIMIT = -1_000_000L;   // maximum allowed negative balance
+    private final long overdraftLimit;
 
     /**
      * Convenience constructor — uses the default
@@ -21,10 +22,17 @@ public class CurrentAccount extends Account {
     /** Strategy-injecting constructor. */
     public CurrentAccount(String accountNumber, long balance,
                            String lastInterestYearMonth, InterestStrategy strategy) {
-        super(accountNumber, balance, AccountType.CURRENT, lastInterestYearMonth, strategy);
+        this(accountNumber, balance, lastInterestYearMonth, strategy, OVERDRAFT_LIMIT);
     }
 
-    @Override public long   getWithdrawalFloor()  { return OVERDRAFT_LIMIT; }
+    public CurrentAccount(String accountNumber, long balance,
+                           String lastInterestYearMonth, InterestStrategy strategy,
+                           long overdraftLimit) {
+        super(accountNumber, balance, AccountType.CURRENT, lastInterestYearMonth, strategy);
+        this.overdraftLimit = overdraftLimit;
+    }
+
+    @Override public long   getWithdrawalFloor()  { return overdraftLimit; }
     @Override public String getAccountTypeLabel() { return "Current Account"; }
 
     @Override
@@ -32,6 +40,6 @@ public class CurrentAccount extends Account {
         return String.format(
                 "Insufficient balance. After withdrawal: %s. Overdraft limit: %s.",
                 FormatUtil.formatVND(getAccountBalance() - requestedAmount),
-                FormatUtil.formatVND(OVERDRAFT_LIMIT));
+                FormatUtil.formatVND(overdraftLimit));
     }
 }

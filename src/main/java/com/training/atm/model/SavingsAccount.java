@@ -8,6 +8,7 @@ import com.training.atm.util.FormatUtil;
 public class SavingsAccount extends Account {
     public static final double MONTHLY_RATE = 0.005; // 0.5 % per month
     public static final long   MIN_BALANCE  = 50_000L;
+    private final long minimumBalance;
 
     /**
      * Convenience constructor — uses the default {@link CompoundInterestStrategy}.
@@ -25,10 +26,17 @@ public class SavingsAccount extends Account {
      */
     public SavingsAccount(String accountNumber, long balance,
                            String lastInterestYearMonth, InterestStrategy strategy) {
-        super(accountNumber, balance, AccountType.SAVINGS, lastInterestYearMonth, strategy);
+        this(accountNumber, balance, lastInterestYearMonth, strategy, MIN_BALANCE);
     }
 
-    @Override public long   getWithdrawalFloor()  { return MIN_BALANCE; }
+    public SavingsAccount(String accountNumber, long balance,
+                           String lastInterestYearMonth, InterestStrategy strategy,
+                           long minimumBalance) {
+        super(accountNumber, balance, AccountType.SAVINGS, lastInterestYearMonth, strategy);
+        this.minimumBalance = minimumBalance;
+    }
+
+    @Override public long   getWithdrawalFloor()  { return minimumBalance; }
     @Override public String getAccountTypeLabel() { return "Savings Account"; }
 
     @Override
@@ -36,6 +44,6 @@ public class SavingsAccount extends Account {
         return String.format(
                 "Insufficient balance. After withdrawal: %s. Savings minimum balance: %s.",
                 FormatUtil.formatVND(getAccountBalance() - requestedAmount),
-                FormatUtil.formatVND(MIN_BALANCE));
+                FormatUtil.formatVND(minimumBalance));
     }
 }
