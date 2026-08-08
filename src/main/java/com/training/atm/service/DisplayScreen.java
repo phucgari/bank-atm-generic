@@ -50,6 +50,16 @@ public class DisplayScreen {
         return pin;
     }
 
+    public String readPassword(String prompt) {
+        Console console = System.console();
+        if (console != null) {
+            char[] password = console.readPassword(prompt);
+            return password == null ? "" : new String(password);
+        }
+        System.out.print(prompt);
+        return scanner.nextLine().trim();
+    }
+
     public void printSeparator()       { System.out.println(SEPARATOR); }
     public void printDoubleSeparator() { System.out.println(DOUBLE_SEPARATOR); }
 }

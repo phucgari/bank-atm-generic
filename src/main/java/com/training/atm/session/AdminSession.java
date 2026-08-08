@@ -57,7 +57,7 @@ public class AdminSession {
         screen.println("=== ADMIN LOGIN ===");
         screen.print("Username: ");
         String user = screen.acceptInput();
-        String pass = screen.readPin("Password: ");
+        String pass = screen.readPassword("Password: ");
 
         if (!ADMIN_USER.equals(user) || !ADMIN_PASS.equals(pass)) {
             screen.println("ERROR: Invalid admin credentials.");
